@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPus
 from PyQt6.QtCore import Qt
 from gui.modules.ecuaciones_widget import EcuacionesWidget
 from gui.modules.transformaciones_widget import TransformacionesWidget
+from gui.modules.operaciones_widget import OperacionesWidget
 from gui.styles import STYLE_SHEET
 
 class MainWindow(QMainWindow):
@@ -53,9 +54,9 @@ class MainWindow(QMainWindow):
         
         sidebar_layout.addSpacing(10)
         
-        # Botones Módulos Futuros
-        self.btn_mod3 = QPushButton("3. Operaciones Matriciales\n(Próximamente)")
-        self.btn_mod3.setEnabled(False)
+        # Botón Módulo 3: Operaciones Matriciales
+        self.btn_mod3 = QPushButton("3. Operaciones Matriciales\n& Combinación Lineal")
+        self.btn_mod3.clicked.connect(self._activar_mod3)
         sidebar_layout.addWidget(self.btn_mod3)
         
         sidebar_layout.addSpacing(10)
@@ -89,6 +90,10 @@ class MainWindow(QMainWindow):
         # Vista 2: Transformaciones Lineales
         self.transformaciones_widget = TransformacionesWidget()
         self.stack.addWidget(self.transformaciones_widget)
+
+        # Vista 3: Operaciones Matriciales & Combinación Lineal
+        self.operaciones_widget = OperacionesWidget()
+        self.stack.addWidget(self.operaciones_widget)
         
         main_layout.addWidget(self.stack)
 
@@ -96,16 +101,24 @@ class MainWindow(QMainWindow):
         self.stack.setCurrentIndex(0)
         self.btn_mod1.setObjectName("PrimaryButton")
         self.btn_mod2.setObjectName("")
+        self.btn_mod3.setObjectName("")
         self._actualizar_estilos_botones()
 
     def _activar_mod2(self):
         self.stack.setCurrentIndex(1)
         self.btn_mod1.setObjectName("")
         self.btn_mod2.setObjectName("PrimaryButton")
+        self.btn_mod3.setObjectName("")
+        self._actualizar_estilos_botones()
+
+    def _activar_mod3(self):
+        self.stack.setCurrentIndex(2)
+        self.btn_mod1.setObjectName("")
+        self.btn_mod2.setObjectName("")
+        self.btn_mod3.setObjectName("PrimaryButton")
         self._actualizar_estilos_botones()
 
     def _actualizar_estilos_botones(self):
-        self.btn_mod1.style().unpolish(self.btn_mod1)
-        self.btn_mod1.style().polish(self.btn_mod1)
-        self.btn_mod2.style().unpolish(self.btn_mod2)
-        self.btn_mod2.style().polish(self.btn_mod2)
+        for btn in (self.btn_mod1, self.btn_mod2, self.btn_mod3):
+            btn.style().unpolish(btn)
+            btn.style().polish(btn)
