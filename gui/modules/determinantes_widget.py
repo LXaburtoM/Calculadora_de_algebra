@@ -1,4 +1,4 @@
-﻿"""
+"""
 Módulo de Interfaz Gráfica para Cálculo de Determinantes.
 Soporta:
 - Expansión por cofactores (para matrices pequeñas)

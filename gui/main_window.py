@@ -14,7 +14,7 @@ from gui.styles import STYLE_SHEET
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Calculadora de Ãlgebra Lineal - UAM (Next-Gen 2026)")
+        self.setWindowTitle("Calculadora de Algebra Lineal - UAM (Next-Gen 2026)")
         self.resize(1200, 800)
         self.setStyleSheet(STYLE_SHEET)
         
@@ -33,7 +33,7 @@ class MainWindow(QMainWindow):
         sidebar.setFixedWidth(280)
         sidebar_layout = QVBoxLayout(sidebar)
         
-        title_label = QLabel("Calculadora\nÃlgebra Lineal")
+        title_label = QLabel("Calculadora\nÁlgebra Lineal")
         title_label.setObjectName("AppTitle")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sidebar_layout.addWidget(title_label)
@@ -42,7 +42,7 @@ class MainWindow(QMainWindow):
         
         # BotÃ³n MÃ³dulo 1: Sistemas de Ecuaciones
         self.btn_mod1 = QPushButton("1. Sistemas de Ecuaciones\n(Gauss & Gauss-Jordan)")
-        self.btn_mod1.setObjectName("PrimaryButton")
+        self.btn_mod1.setObjectName("MenuButtonActive")
         self.btn_mod1.clicked.connect(self._activar_mod1)
         sidebar_layout.addWidget(self.btn_mod1)
         
@@ -74,7 +74,7 @@ class MainWindow(QMainWindow):
         
         sidebar_layout.addStretch()
         
-        footer_label = QLabel("UAM - FIA 2026\nProyecto Integrador de Ãlgebra")
+        footer_label = QLabel("UAM - FIA 2026\nProyecto Integrador de Algebra")
         footer_label.setStyleSheet("color: #64748B; font-size: 11px;")
         footer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sidebar_layout.addWidget(footer_label)
@@ -103,7 +103,7 @@ class MainWindow(QMainWindow):
 
     def _activar_mod1(self):
         self.stack.setCurrentIndex(0)
-        self.btn_mod1.setObjectName("PrimaryButton")
+        self.btn_mod1.setObjectName("MenuButtonActive")
         self.btn_mod2.setObjectName("")
         self.btn_mod3.setObjectName("")
         self._actualizar_estilos_botones()
@@ -111,7 +111,7 @@ class MainWindow(QMainWindow):
     def _activar_mod2(self):
         self.stack.setCurrentIndex(1)
         self.btn_mod1.setObjectName("")
-        self.btn_mod2.setObjectName("PrimaryButton")
+        self.btn_mod2.setObjectName("MenuButtonActive")
         self.btn_mod3.setObjectName("")
         self._actualizar_estilos_botones()
 
@@ -119,7 +119,7 @@ class MainWindow(QMainWindow):
         self.stack.setCurrentIndex(2)
         self.btn_mod1.setObjectName("")
         self.btn_mod2.setObjectName("")
-        self.btn_mod3.setObjectName("PrimaryButton")
+        self.btn_mod3.setObjectName("MenuButtonActive")
         self._actualizar_estilos_botones()
 
     def _activar_mod4(self):
@@ -127,7 +127,7 @@ class MainWindow(QMainWindow):
         self.btn_mod1.setObjectName("")
         self.btn_mod2.setObjectName("")
         self.btn_mod3.setObjectName("")
-        self.btn_mod4.setObjectName("PrimaryButton")
+        self.btn_mod4.setObjectName("MenuButtonActive")
         self._actualizar_estilos_botones()
 
     def _actualizar_estilos_botones(self):
@@ -149,3 +149,4 @@ class MainWindow(QMainWindow):
             txt = "Módulo 4: Determinantes\n\nPropiedades:\n1. Si A tiene una fila o columna de ceros, |A| = 0.\n2. Si se intercambian dos filas, el determinante cambia de signo.\n3. Si se multiplica una fila por un escalar c, el determinante se multiplica por c.\n4. Si a una fila se le suma un múltiplo de otra (R_i = R_i + cR_j), el determinante NO cambia."
             
         QMessageBox.information(self, "Teoremas Clave del Módulo Actual", txt)
+

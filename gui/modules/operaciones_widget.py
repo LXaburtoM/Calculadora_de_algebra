@@ -1,10 +1,10 @@
-﻿"""
-MÃ³dulo de Interfaz GrÃ¡fica para Operaciones en Rn y Operaciones Matriciales.
+"""
+Módulo de Interfaz Gráfica para Operaciones en Rn y Operaciones Matriciales.
 
-Organizado en 3 pestaÃ±as:
-  PestaÃ±a 1 - Operaciones Vectoriales : suma, resta y escalar x vector
-  PestaÃ±a 2 - Operaciones Matriciales : suma, resta, escalar x matriz, AÂ·B
-  PestaÃ±a 3 - CombinaciÃ³n Lineal      : verifica si b pertenece a span{v1,...,vk}
+Organizado en 3 pestañas:
+  Pestaña 1 - Operaciones Vectoriales : suma, resta y escalar x vector
+  Pestaña 2 - Operaciones Matriciales : suma, resta, escalar x matriz, A·B
+  Pestaña 3 - Combinación Lineal      : verifica si b pertenece a span{v1,...,vk}
 """
 
 from PyQt6.QtWidgets import (
@@ -29,7 +29,7 @@ SEP = "â”€" * 78
 
 
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-# Clase Principal del MÃ³dulo
+# Clase Principal del Módulo
 # â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 class OperacionesWidget(QWidget):
     def __init__(self):
@@ -40,41 +40,41 @@ class OperacionesWidget(QWidget):
         layout = QVBoxLayout(self)
 
         encabezado = QLabel(
-            "Operaciones en â„â¿ y Operaciones Matriciales BÃ¡sicas"
+            "Operaciones en â„ⁿ y Operaciones Matriciales Básicas"
         )
         encabezado.setObjectName("SectionHeader")
         encabezado.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(encabezado)
 
-        # PestaÃ±as principales
+        # Pestañas principales
         self.tabs = QTabWidget()
         self.tabs.addTab(self._crear_tab_vectores(),  "1. Operaciones Vectoriales")
         self.tabs.addTab(self._crear_tab_matrices(),  "2. Operaciones Matriciales")
-        self.tabs.addTab(self._crear_tab_comb_lineal(), "3. CombinaciÃ³n Lineal")
+        self.tabs.addTab(self._crear_tab_comb_lineal(), "3. Combinación Lineal")
         layout.addWidget(self.tabs)
 
     # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    # PESTAÃ‘A 1: OPERACIONES VECTORIALES
+    # PESTAÁ‘A 1: OPERACIONES VECTORIALES
     # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     def _crear_tab_vectores(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
 
         # --- Controles superiores ---
-        ctrl_box = QGroupBox("ConfiguraciÃ³n")
+        ctrl_box = QGroupBox("Configuración")
         ctrl_layout = QHBoxLayout(ctrl_box)
 
-        ctrl_layout.addWidget(QLabel("OperaciÃ³n:"))
+        ctrl_layout.addWidget(QLabel("Operación:"))
         self.combo_vec_op = QComboBox()
         self.combo_vec_op.addItems([
-            "Suma  (vâ‚ + vâ‚‚)",
-            "Resta  (vâ‚ âˆ’ vâ‚‚)",
-            "Escalar Ã— Vector  (c Â· vâ‚)",
+            "Suma  (v₁ + vâ‚‚)",
+            "Resta  (v₁ âˆ’ vâ‚‚)",
+            "Escalar Á— Vector  (c · v₁)",
         ])
         self.combo_vec_op.currentIndexChanged.connect(self._actualizar_modo_vec)
         ctrl_layout.addWidget(self.combo_vec_op)
 
-        ctrl_layout.addWidget(QLabel("DimensiÃ³n n:"))
+        ctrl_layout.addWidget(QLabel("Dimensión n:"))
         self.spin_vec_n = QSpinBox()
         self.spin_vec_n.setRange(1, 10)
         self.spin_vec_n.setValue(3)
@@ -92,7 +92,7 @@ class OperacionesWidget(QWidget):
         ctrl_layout.addWidget(self.chk_frac_vec)
 
         ctrl_layout.addStretch()
-        btn_calc_vec = QPushButton("â–¶ Calcular")
+        btn_calc_vec = QPushButton("▶ Calcular")
         btn_calc_vec.setObjectName("PrimaryButton")
         btn_calc_vec.clicked.connect(self._calcular_vectores)
         ctrl_layout.addWidget(btn_calc_vec)
@@ -101,13 +101,13 @@ class OperacionesWidget(QWidget):
         # --- Tablas de vectores ---
         tablas_layout = QHBoxLayout()
 
-        vec1_box = QGroupBox("Vector vâ‚")
+        vec1_box = QGroupBox("Vector v₁")
         vec1_lay = QVBoxLayout(vec1_box)
         self.tabla_v1 = QTableWidget()
         vec1_lay.addWidget(self.tabla_v1)
         tablas_layout.addWidget(vec1_box)
 
-        vec2_box = QGroupBox("Vector vâ‚‚  (no aplica en escalarÃ—v)")
+        vec2_box = QGroupBox("Vector vâ‚‚  (no aplica en escalarÁ—v)")
         vec2_lay = QVBoxLayout(vec2_box)
         self.tabla_v2 = QTableWidget()
         vec2_lay.addWidget(self.tabla_v2)
@@ -127,7 +127,7 @@ class OperacionesWidget(QWidget):
         return tab
 
     def _actualizar_modo_vec(self, idx):
-        """Habilita/deshabilita vâ‚‚ y el campo escalar segÃºn la operaciÃ³n."""
+        """Habilita/deshabilita vâ‚‚ y el campo escalar según la operación."""
         es_escalar = (idx == 2)
         self.le_escalar_vec.setEnabled(es_escalar)
         self.tabla_v2.setEnabled(not es_escalar)
@@ -163,9 +163,9 @@ class OperacionesWidget(QWidget):
         frac = self.chk_frac_vec.isChecked()
         idx = self.combo_vec_op.currentIndex()
 
-        v1, errores = self._leer_vector(self.tabla_v1, n, "vâ‚")
+        v1, errores = self._leer_vector(self.tabla_v1, n, "v₁")
 
-        if idx == 2:   # Escalar Ã— vector
+        if idx == 2:   # Escalar Á— vector
             esc_txt = self.le_escalar_vec.text().strip()
             esc_val, err = parse_expresion(esc_txt)
             if err:
@@ -175,7 +175,7 @@ class OperacionesWidget(QWidget):
                 return
 
             resultado, pasos, error = escalar_por_vector(esc_val, v1)
-            op_str = f"{formato_numero(esc_val, frac)} Â· vâ‚"
+            op_str = f"{formato_numero(esc_val, frac)} · v₁"
         else:
             v2, err2 = self._leer_vector(self.tabla_v2, n, "vâ‚‚")
             errores.extend(err2)
@@ -185,20 +185,20 @@ class OperacionesWidget(QWidget):
 
             if idx == 0:
                 resultado, pasos, error = sumar_vectores(v1, v2)
-                op_str = "vâ‚ + vâ‚‚"
+                op_str = "v₁ + vâ‚‚"
             else:
                 resultado, pasos, error = restar_vectores(v1, v2)
-                op_str = "vâ‚ âˆ’ vâ‚‚"
+                op_str = "v₁ âˆ’ vâ‚‚"
 
         if error:
             QMessageBox.critical(self, "Error", error)
             return
 
         lineas = [
-            f"OPERACIÃ“N VECTORIAL:  {op_str}",
+            f"OPERACIÓN VECTORIAL:  {op_str}",
             SEP,
             "",
-            "CÃLCULO COMPONENTE A COMPONENTE:",
+            "CÁLCULO COMPONENTE A COMPONENTE:",
         ]
         lineas.extend(pasos)
         lineas.append("")
@@ -208,21 +208,21 @@ class OperacionesWidget(QWidget):
         self.txt_vec.setText("\n".join(lineas))
 
     # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    # PESTAÃ‘A 2: OPERACIONES MATRICIALES
+    # PESTAÁ‘A 2: OPERACIONES MATRICIALES
     # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     def _crear_tab_matrices(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
 
-        # --- Ejemplos de Clase (SesiÃ³n 9) ---
-        ejemplos_box = QGroupBox("Ejemplos de Clase (SesiÃ³n 9)")
+        # --- Ejemplos de Clase (Sesión 9) ---
+        ejemplos_box = QGroupBox("Ejemplos de Clase (Sesión 9)")
         ejemplos_lay = QHBoxLayout(ejemplos_box)
         ejemplos_lay.addWidget(QLabel("Cargar Ejemplo:"))
         self.combo_ejemplos = QComboBox()
         self.combo_ejemplos.addItems([
             "-- Seleccione --",
             "Ejemplo 1: Suma de Matrices (A + B)",
-            "Ejemplo 2: MultiplicaciÃ³n Fila-Columna (A Â· B)",
+            "Ejemplo 2: Multiplicación Fila-Columna (A · B)",
             "Ejemplo 3: Matriz Transpuesta (Aáµ€)"
         ])
         ejemplos_lay.addWidget(self.combo_ejemplos)
@@ -234,16 +234,16 @@ class OperacionesWidget(QWidget):
         layout.addWidget(ejemplos_box)
 
         # --- Controles ---
-        ctrl_box = QGroupBox("ConfiguraciÃ³n")
+        ctrl_box = QGroupBox("Configuración")
         ctrl_layout = QHBoxLayout(ctrl_box)
 
-        ctrl_layout.addWidget(QLabel("OperaciÃ³n:"))
+        ctrl_layout.addWidget(QLabel("Operación:"))
         self.combo_mat_op = QComboBox()
         self.combo_mat_op.addItems([
             "Suma  (A + B)",
             "Resta  (A âˆ’ B)",
-            "Escalar Ã— Matriz  (c Â· A)",
-            "MultiplicaciÃ³n  (A Â· B)",
+            "Escalar Á— Matriz  (c · A)",
+            "Multiplicación  (A · B)",
             "Transpuesta  (Aáµ€)",
         ])
         self.combo_mat_op.currentIndexChanged.connect(self._actualizar_modo_mat)
@@ -279,7 +279,7 @@ class OperacionesWidget(QWidget):
         self.chk_frac_mat.setChecked(True)
         ctrl_layout.addWidget(self.chk_frac_mat)
 
-        btn_calc_mat = QPushButton("â–¶ Calcular")
+        btn_calc_mat = QPushButton("▶ Calcular")
         btn_calc_mat.setObjectName("PrimaryButton")
         btn_calc_mat.clicked.connect(self._calcular_matrices)
         ctrl_layout.addWidget(btn_calc_mat)
@@ -294,7 +294,7 @@ class OperacionesWidget(QWidget):
         layA.addWidget(self.tabla_A)
         tablas_layout.addWidget(boxA)
 
-        boxB = QGroupBox("Matriz B  (no aplica en escalarÃ—A o Aáµ€)")
+        boxB = QGroupBox("Matriz B  (no aplica en escalarÁ—A o Aáµ€)")
         layB = QVBoxLayout(boxB)
         self.tabla_B = QTableWidget()
         layB.addWidget(self.tabla_B)
@@ -322,7 +322,7 @@ class OperacionesWidget(QWidget):
             self.spin_mB.setValue(2); self.spin_nB.setValue(2)
             self._llenar_matriz(self.tabla_A, [[1, 4], [2, 5]])
             self._llenar_matriz(self.tabla_B, [[-1, 3], [0, 2]])
-        elif idx == 2: # MultiplicaciÃ³n de matrices
+        elif idx == 2: # Multiplicación de matrices
             self.combo_mat_op.setCurrentIndex(3)
             self.spin_mA.setValue(2); self.spin_nA.setValue(3)
             self.spin_mB.setValue(3); self.spin_nB.setValue(2)
@@ -344,7 +344,7 @@ class OperacionesWidget(QWidget):
                     tabla.item(i, j).setText(str(datos[i][j]))
 
     def _actualizar_modo_mat(self, idx):
-        """Ajusta quÃ© controles estÃ¡n activos segÃºn la operaciÃ³n elegida."""
+        """Ajusta qué controles están activos según la operación elegida."""
         es_escalar = (idx == 2)
         es_transpuesta = (idx == 4)
         es_inversa = (idx == 5)
@@ -373,7 +373,7 @@ class OperacionesWidget(QWidget):
         tabla.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
     def _leer_matriz(self, tabla, m, n, etiqueta):
-        """Lee una matriz mÃ—n desde una QTableWidget."""
+        """Lee una matriz mÁ—n desde una QTableWidget."""
         M = []
         errores = []
         for i in range(m):
@@ -406,7 +406,7 @@ class OperacionesWidget(QWidget):
         A, errA = self._leer_matriz(self.tabla_A, mA, nA, "A")
         errores = list(errA)
 
-        if idx == 2:  # Escalar Ã— Matriz
+        if idx == 2:  # Escalar Á— Matriz
             esc_val, err = parse_expresion(self.le_escalar_mat.text().strip())
             if err:
                 errores.append(f"â€¢ Escalar c: {err}")
@@ -414,12 +414,12 @@ class OperacionesWidget(QWidget):
                 QMessageBox.critical(self, "Error en los datos", "\n".join(errores))
                 return
             resultado, pasos, error = escalar_por_matriz(esc_val, A, mA, nA)
-            op_str = f"{formato_numero(esc_val, frac)} Â· A"
-            dim_res = f"{mA}Ã—{nA}"
+            op_str = f"{formato_numero(esc_val, frac)} · A"
+            dim_res = f"{mA}Á—{nA}"
         elif idx == 4: # Transpuesta
             resultado, pasos, error = transpuesta_matriz(A, mA, nA)
             op_str = "Aáµ€"
-            dim_res = f"{nA}Ã—{mA}"
+            dim_res = f"{nA}Á—{mA}"
         else:
             B, errB = self._leer_matriz(self.tabla_B, mB, nB, "B")
             errores.extend(errB)
@@ -430,25 +430,25 @@ class OperacionesWidget(QWidget):
             if idx == 0:
                 resultado, pasos, error = sumar_matrices(A, B, mA, nA, mB, nB)
                 op_str = "A + B"
-                dim_res = f"{mA}Ã—{nA}"
+                dim_res = f"{mA}Á—{nA}"
             elif idx == 1:
                 resultado, pasos, error = restar_matrices(A, B, mA, nA, mB, nB)
                 op_str = "A âˆ’ B"
-                dim_res = f"{mA}Ã—{nA}"
-            else:   # idx == 3: MultiplicaciÃ³n AÂ·B
+                dim_res = f"{mA}Á—{nA}"
+            else:   # idx == 3: Multiplicación A·B
                 resultado, pasos, error = multiplicar_matrices(A, B, mA, nA, nB)
-                op_str = "A Â· B"
-                dim_res = f"{mA}Ã—{nB}"
+                op_str = "A · B"
+                dim_res = f"{mA}Á—{nB}"
 
         if error:
             QMessageBox.critical(self, "Error de dimensiones", error)
             return
 
         lineas = [
-            f"OPERACIÃ“N MATRICIAL:  {op_str}",
+            f"OPERACIÓN MATRICIAL:  {op_str}",
             SEP,
             "",
-            "CÃLCULO ENTRADA POR ENTRADA:",
+            "CÁLCULO ENTRADA POR ENTRADA:",
         ]
         lineas.extend(pasos)
         lineas.append("")
@@ -458,22 +458,22 @@ class OperacionesWidget(QWidget):
         self.txt_mat.setText("\n".join(lineas))
 
     # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    # PESTAÃ‘A 3: COMBINACIÃ“N LINEAL
+    # PESTAÁ‘A 3: COMBINACIÓN LINEAL
     # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     def _crear_tab_comb_lineal(self):
         tab = QWidget()
         layout = QVBoxLayout(tab)
 
         # --- Controles ---
-        ctrl_box = QGroupBox("ConfiguraciÃ³n")
+        ctrl_box = QGroupBox("Configuración")
         ctrl_layout = QHBoxLayout(ctrl_box)
 
-        ctrl_layout.addWidget(QLabel("DimensiÃ³n n (Râ¿):"))
+        ctrl_layout.addWidget(QLabel("Dimensión n (Rⁿ):"))
         self.spin_cl_n = QSpinBox(); self.spin_cl_n.setRange(1, 8); self.spin_cl_n.setValue(3)
         self.spin_cl_n.valueChanged.connect(self._actualizar_tabla_cl)
         ctrl_layout.addWidget(self.spin_cl_n)
 
-        ctrl_layout.addWidget(QLabel("  NÃºmero de vectores k:"))
+        ctrl_layout.addWidget(QLabel("  Número de vectores k:"))
         self.spin_cl_k = QSpinBox(); self.spin_cl_k.setRange(1, 6); self.spin_cl_k.setValue(2)
         self.spin_cl_k.valueChanged.connect(self._actualizar_tabla_cl)
         ctrl_layout.addWidget(self.spin_cl_k)
@@ -484,16 +484,16 @@ class OperacionesWidget(QWidget):
 
         ctrl_layout.addStretch()
 
-        btn_cl = QPushButton("â–¶ Verificar CombinaciÃ³n Lineal")
+        btn_cl = QPushButton("▶ Verificar Combinación Lineal")
         btn_cl.setObjectName("PrimaryButton")
         btn_cl.clicked.connect(self._verificar_cl)
         ctrl_layout.addWidget(btn_cl)
         layout.addWidget(ctrl_box)
 
-        # --- Tabla de vectores (k columnas = v1..vk, Ãºltima columna = b) ---
+        # --- Tabla de vectores (k columnas = v1..vk, última columna = b) ---
         tabla_box = QGroupBox(
-            "Matriz de vectores [vâ‚ | vâ‚‚ | â€¦ | vâ‚– | b]  "
-            "â€” cada columna es un vector, la Ãºltima columna es b"
+            "Matriz de vectores [v₁ | vâ‚‚ | â€¦ | vâ‚– | b]  "
+            "â€” cada columna es un vector, la última columna es b"
         )
         tabla_lay = QVBoxLayout(tabla_box)
         self.tabla_cl = QTableWidget()
@@ -512,14 +512,14 @@ class OperacionesWidget(QWidget):
         return tab
 
     def _actualizar_tabla_cl(self):
-        n = self.spin_cl_n.value()   # dimensiÃ³n
-        k = self.spin_cl_k.value()   # nÃºmero de vectores generadores
+        n = self.spin_cl_n.value()   # dimensión
+        k = self.spin_cl_k.value()   # número de vectores generadores
         total_cols = k + 1           # k vectores + 1 columna b
 
         self.tabla_cl.setRowCount(n)
         self.tabla_cl.setColumnCount(total_cols)
 
-        # Encabezados: vâ‚, vâ‚‚, ..., vâ‚–, b
+        # Encabezados: v₁, vâ‚‚, ..., vâ‚–, b
         headers = [f"v{i+1}" for i in range(k)] + ["b"]
         self.tabla_cl.setHorizontalHeaderLabels(headers)
         self.tabla_cl.setVerticalHeaderLabels([nombre_var(i) for i in range(n)])
@@ -550,7 +550,7 @@ class OperacionesWidget(QWidget):
                 v.append(val if val is not None else Fraction(0))
             vectores.append(v)
 
-        # Leer el vector b (Ãºltima columna)
+        # Leer el vector b (última columna)
         b = []
         for i in range(n):
             item = self.tabla_cl.item(i, k)
@@ -563,7 +563,7 @@ class OperacionesWidget(QWidget):
             QMessageBox.critical(self, "Error en los datos", "\n".join(errores))
             return
 
-        # Llamar al motor de combinaciÃ³n lineal
+        # Llamar al motor de combinación lineal
         res = es_combinacion_lineal(b, vectores)
 
         if res.get("error"):
@@ -572,14 +572,14 @@ class OperacionesWidget(QWidget):
 
         # Formatear salida
         lineas = [
-            "VERIFICACIÃ“N DE COMBINACIÃ“N LINEAL",
-            f"Â¿Es  b  combinaciÃ³n lineal de  " +
+            "VERIFICACIÓN DE COMBINACIÓN LINEAL",
+            f"¿Es  b  combinación lineal de  " +
             "{ " + ", ".join(f"v{i+1}" for i in range(k)) + " }?",
             SEP,
             "",
-            "ESTRATEGIA: Se plantea el sistema  [vâ‚ | vâ‚‚ | â€¦ | vâ‚– | b]",
+            "ESTRATEGIA: Se plantea el sistema  [v₁ | vâ‚‚ | â€¦ | vâ‚– | b]",
             "y se verifica si es CONSISTENTE usando Gauss-Jordan.",
-            "Si tiene soluciÃ³n, existen escalares câ‚,â€¦,câ‚– tales que b = câ‚vâ‚+â€¦+câ‚–vâ‚–.",
+            "Si tiene solución, existen escalares c₁,â€¦,câ‚– tales que b = c₁v₁+â€¦+câ‚–vâ‚–.",
             "",
         ]
 
@@ -593,7 +593,7 @@ class OperacionesWidget(QWidget):
         lineas.append(SEP)
 
         if res["es_cl"]:
-            lineas.append("âœ”  SÃ â€” b ES COMBINACIÃ“N LINEAL de los vectores dados.")
+            lineas.append("âœ”  SÍ â€” b ES COMBINACIÓN LINEAL de los vectores dados.")
             lineas.append("")
             esc = res["escalares"]
             if esc == "infinitas":
@@ -601,27 +601,27 @@ class OperacionesWidget(QWidget):
                     "Hay INFINITAS combinaciones posibles (los vectores son linealmente dependientes)."
                 )
                 lineas.append(
-                    "Existen mÃºltiples conjuntos de escalares (câ‚, câ‚‚, ...) que satisfacen la ecuaciÃ³n."
+                    "Existen múltiples conjuntos de escalares (c₁, câ‚‚, ...) que satisfacen la ecuación."
                 )
             else:
-                lineas.append("Escalares Ãºnicos encontrados:")
+                lineas.append("Escalares únicos encontrados:")
                 partes_eq = []
                 for j in range(k):
                     clave = nombre_var(j)
                     valor = esc.get(clave, Fraction(0))
                     lineas.append(f"   c{j+1} = {formato_numero(valor, frac)}")
                     partes_eq.append(
-                        f"({formato_numero(valor, frac)})Â·v{j+1}"
+                        f"({formato_numero(valor, frac)})·v{j+1}"
                     )
                 lineas.append("")
-                lineas.append("CombinaciÃ³n lineal verificada:")
+                lineas.append("Combinación lineal verificada:")
                 lineas.append(f"   b = {' + '.join(partes_eq)}")
         else:
-            lineas.append("âœ˜  NO â€” b NO es combinaciÃ³n lineal de los vectores dados.")
+            lineas.append("âœ˜  NO â€” b NO es combinación lineal de los vectores dados.")
             lineas.append("")
             lineas.append(
-                "El sistema [vâ‚|â€¦|vâ‚–|b] resultÃ³ INCONSISTENTE: la columna b "
-                "es columna pivote, lo que significa que b estÃ¡ fuera del "
+                "El sistema [v₁|â€¦|vâ‚–|b] resultó INCONSISTENTE: la columna b "
+                "es columna pivote, lo que significa que b está fuera del "
                 "espacio generado por los vectores dados."
             )
 
