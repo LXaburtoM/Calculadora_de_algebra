@@ -9,6 +9,7 @@ from gui.modules.ecuaciones_widget import EcuacionesWidget
 from gui.modules.transformaciones_widget import TransformacionesWidget
 from gui.modules.operaciones_widget import OperacionesWidget
 from gui.modules.determinantes_widget import DeterminantesWidget
+from gui.modules.verificador_widget import VerificadorWidget
 from gui.styles import STYLE_SHEET
 
 class MainWindow(QMainWindow):
@@ -49,26 +50,26 @@ class MainWindow(QMainWindow):
         sidebar_layout.addSpacing(10)
         
         # BotÃ³n MÃ³dulo 2: Transformaciones Lineales
-        self.btn_mod2 = QPushButton("2. Transformaciones Lineales\n[ T(x) = A Â· x ]")
+        self.btn_mod2 = QPushButton("2. Transformaciones Lineales\n[ T(x) = A · x ]")
         self.btn_mod2.clicked.connect(self._activar_mod2)
         sidebar_layout.addWidget(self.btn_mod2)
         
         sidebar_layout.addSpacing(10)
         
         # BotÃ³n MÃ³dulo 3: Operaciones Matriciales
-        self.btn_mod3 = QPushButton("3. Operaciones Matriciales\n& CombinaciÃ³n Lineal")
+        self.btn_mod3 = QPushButton("3. Operaciones Matriciales\n& Combinación Lineal")
         self.btn_mod3.clicked.connect(self._activar_mod3)
         sidebar_layout.addWidget(self.btn_mod3)
         
         sidebar_layout.addSpacing(10)
         
-        self.btn_mod4 = QPushButton("4. Determinantes & Cramer\n(PrÃ³ximamente)")
+        self.btn_mod4 = QPushButton("4. Determinantes & Cramer\n(Próximamente)")
         self.btn_mod4.clicked.connect(self._activar_mod4)
         sidebar_layout.addWidget(self.btn_mod4)
         
         sidebar_layout.addSpacing(10)
         
-        self.btn_mod5 = QPushButton("5. Vectores & Espacios\n(PrÃ³ximamente)")
+        self.btn_mod5 = QPushButton("5. Vectores & Espacios\n(Próximamente)")
         self.btn_mod5.setEnabled(False)
         sidebar_layout.addWidget(self.btn_mod5)
         
@@ -92,13 +93,18 @@ class MainWindow(QMainWindow):
         self.transformaciones_widget = TransformacionesWidget()
         self.stack.addWidget(self.transformaciones_widget)
 
-        # Vista 3: Operaciones Matriciales & CombinaciÃ³n Lineal
+        # Vista 3: Operaciones Matriciales & Combinación Lineal
         self.operaciones_widget = OperacionesWidget()
         self.stack.addWidget(self.operaciones_widget)
         
         # Vista 4: Determinantes
         self.determinantes_widget = DeterminantesWidget()
         self.stack.addWidget(self.determinantes_widget)
+        
+        # Vista 6: Verificador de Propiedades
+        self.verificador_widget = VerificadorWidget()
+        self.stack.addWidget(self.verificador_widget)
+        
         main_layout.addWidget(self.stack)
 
     def _activar_mod1(self):
@@ -130,8 +136,17 @@ class MainWindow(QMainWindow):
         self.btn_mod4.setObjectName("MenuButtonActive")
         self._actualizar_estilos_botones()
 
+    def _activar_mod6(self):
+        self.stack.setCurrentIndex(4)
+        self.btn_mod1.setObjectName("")
+        self.btn_mod2.setObjectName("")
+        self.btn_mod3.setObjectName("")
+        self.btn_mod4.setObjectName("")
+        self.btn_mod6.setObjectName("MenuButtonActive")
+        self._actualizar_estilos_botones()
+
     def _actualizar_estilos_botones(self):
-        for btn in (self.btn_mod1, self.btn_mod2, self.btn_mod3, self.btn_mod4):
+        for btn in (self.btn_mod1, self.btn_mod2, self.btn_mod3, self.btn_mod4, getattr(self, "btn_mod6", self.btn_mod4)):
             btn.style().unpolish(btn)
             btn.style().polish(btn)
 

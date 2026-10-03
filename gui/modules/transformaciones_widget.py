@@ -18,7 +18,7 @@ from core.parser import parse_expresion, formato_numero
 from core.transformaciones_lineales import analizar_transformacion_completa, evaluar_transformacion
 from core.eliminacion_gaussiana import nombre_var
 
-SEP = "─" * 78
+SEP = "-" * 78
 
 class TransformacionesWidget(QWidget):
     def __init__(self):

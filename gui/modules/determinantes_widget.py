@@ -15,7 +15,7 @@ from core.parser import parse_expresion, formato_numero
 from core.eliminacion_gaussiana import nombre_var
 from core.algebra_avanzada import determinante_cofactores, determinante_reduccion
 
-SEP = "─" * 78
+SEP = "-" * 78
 
 class DeterminantesWidget(QWidget):
     def __init__(self):

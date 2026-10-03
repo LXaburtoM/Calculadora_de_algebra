@@ -25,7 +25,7 @@ from core.eliminacion_gaussiana import (
 from core.modelos_aplicados import MODELOS
 
 ANCHO_MIN = 5
-SEP = "─" * 78
+SEP = "-" * 78
 
 class EcuacionesWidget(QWidget):
     def __init__(self):
