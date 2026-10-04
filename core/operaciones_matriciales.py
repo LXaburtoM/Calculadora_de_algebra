@@ -1,21 +1,8 @@
 """
-Módulo de Operaciones Algebraicas en Rn y Operaciones Matriciales Básicas.
-
-Implementa (sin usar numpy, scipy ni math):
-  SECCIÓN 1 - Operaciones Vectoriales:
-    - suma_vectores        : v1 + v2  componente a componente
-    - resta_vectores       : v1 - v2  componente a componente
-    - escalar_por_vector   : c * v    cada componente multiplicada por c
-  SECCIÓN 2 - Operaciones Matriciales:
-    - sumar_matrices       : A + B    (valida que tengan mismas dimensiones m x n)
-    - restar_matrices      : A - B    (valida que tengan mismas dimensiones m x n)
-    - escalar_por_matriz   : c * A    cada entrada multiplicada por c
-    - multiplicar_matrices : A * B    (Regla Fila-Columna, valida cols A == filas B)
-    - transpuesta_matriz   : A^T      intercambia filas por columnas (Sesión 9)
-  SECCIÓN 3 - Combinación Lineal:
-    - es_combinacion_lineal: verifica si b pertenece a span{v1, v2, ..., vk}
-                             planteando el sistema [v1|v2|...|vk|b] y revisando
-                             si es consistente con Gauss-Jordan.
+Módulo 3: Operaciones con Vectores y Matrices.
+Tema: Suma, resta, escalar, multiplicación fila-columna, transpuesta y combinación lineal (Sesión 9).
+Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
+               Antonio Esteban Vargas Ramírez, Luis Xavier Aburto Mantilla.
 """
 
 from fractions import Fraction

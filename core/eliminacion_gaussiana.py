@@ -1,14 +1,8 @@
 """
-Motor de Reducción por Filas con soporte nativo de Fracciones exactas.
-
-Implementa:
-1. MÉTODO DE ELIMINACIÓN DE GAUSS:
-   - Fase Progresiva -> Forma Escalonada (REF)
-   - Sustitución Hacia Atrás (Back-Substitution) paso a paso
-2. MÉTODO DE GAUSS-JORDAN:
-   - Fase Progresiva + Fase Regresiva -> Forma Escalonada Reducida (RREF)
-3. ANÁLISIS DE EXISTENCIA Y UNICIDAD (§1.2, Teorema 2 de Lay).
-4. VERIFICACIÓN DE LAS 5 PROPIEDADES DE FORMA ESCALONADA.
+Módulo 1: Motor de Eliminación Gaussiana y Gauss-Jordan.
+Tema: Sistemas de Ecuaciones Lineales, Forma Escalonada Reducida (RREF).
+Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
+               Antonio Esteban Vargas Ramírez, Luis Xavier Aburto Mantilla.
 """
 
 from fractions import Fraction

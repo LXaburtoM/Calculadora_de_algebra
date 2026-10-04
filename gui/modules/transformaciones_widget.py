@@ -1,10 +1,8 @@
 """
-Módulo de Interfaz Gráfica para Introducción a Transformaciones Lineales T(x) = Ax.
-Soporta:
-- Configuración de T: R^n -> R^m mediante matriz estándar A.
-- Cálculo de Imagen: w = T(u) = A · u
-- Preimagen / Verificación de pertenencia al rango: ¿Existe x tal que T(x) = b?
-- Análisis teórico formal de Inyectividad (Uno a uno) y Sobreyectividad (Sobre R^m).
+Módulo 2: Interfaz Gráfica para Transformaciones Lineales.
+Tema: T(x) = Ax, inyectividad y sobreyectividad (Sesiones 6-8).
+Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
+               Antonio Esteban Vargas Ramírez, Luis Xavier Aburto Mantilla.
 """
 
 from PyQt6.QtWidgets import (

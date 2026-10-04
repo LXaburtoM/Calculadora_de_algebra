@@ -1,6 +1,8 @@
 ﻿"""
-Ventana Principal de la Calculadora de Ãlgebra Lineal.
-Dashboard moderno con menÃº de navegaciÃ³n por mÃ³dulos.
+Ventana Principal de la Calculadora de Álgebra Lineal.
+Tema: Dashboard moderno con navegación por módulos (PyQt6).
+Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
+               Antonio Esteban Vargas Ramírez, Luis Xavier Aburto Mantilla.
 """
 
 from PyQt6.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QLabel, QStackedWidget, QFrame

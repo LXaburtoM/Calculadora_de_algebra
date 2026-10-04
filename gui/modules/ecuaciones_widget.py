@@ -1,11 +1,8 @@
 """
-Módulo de Interfaz Gráfica para la Solución de Sistemas de Ecuaciones Lineales.
-Soporta:
-- Separación explícita: Método de Gauss vs Método de Gauss-Jordan.
-- Modelos Aplicados (Asignación de Recursos, Flujo de Redes de Tráfico, Inversión).
-- Verificación de Forma Escalonada (5 Propiedades de Lay).
-- Entrada flexible (Fracciones 1/2, decimales, constantes pi, sen, cos, etc.).
-- Procedimiento paso a paso detallado y verificación automática.
+Módulo 1: Interfaz Gráfica para Sistemas de Ecuaciones.
+Tema: Resolución de SEL por Gauss y Gauss-Jordan con paso a paso (Sesiones 1-5).
+Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
+               Antonio Esteban Vargas Ramírez, Luis Xavier Aburto Mantilla.
 """
 
 from PyQt6.QtWidgets import (

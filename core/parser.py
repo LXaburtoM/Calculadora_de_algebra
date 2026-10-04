@@ -1,18 +1,8 @@
 """
-Módulo de Lectura, Evaluación y Conversión de Expresiones Matemáticas y Fracciones.
-Soporta:
-- Constantes: pi, PI, Pi, π, e, E
-- Fracciones y decimales: 1/2, -3/4, 2.5
-- Funciones trigonométricas en español e inglés:
-  * tangente, tan, tg
-  * cotangente, cot, ctg
-  * seno, sen, sin
-  * coseno, cos
-  * secante, sec
-  * cosecante, csc
-- Raíces y potencias: raiz(16), raíz(25), sqrt(9), 2^3
-- Logaritmos y exponenciales: ln(e), exp(0), abs(-5)
-- Manejo de Errores: Captura divisiones por cero, asíntotas e indeterminaciones.
+Módulo de Parseo y Formato de Expresiones Numéricas.
+Tema: Conversión de entrada del usuario a fracciones exactas (Fraction).
+Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
+               Antonio Esteban Vargas Ramírez, Luis Xavier Aburto Mantilla.
 """
 
 from fractions import Fraction

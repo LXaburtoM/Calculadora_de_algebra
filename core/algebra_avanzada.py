@@ -1,6 +1,8 @@
-﻿"""
-Módulo de Álgebra Avanzada (Inversa, Determinantes, Independencia Lineal)
-No usa numpy, scipy ni math.
+"""
+Módulo de Álgebra Avanzada: Inversa, Determinantes e Independencia Lineal.
+Tema: Matriz Inversa (Sesión 10), Determinantes por cofactores y reducción (Sesión 11).
+Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
+               Antonio Esteban Vargas Ramírez, Luis Xavier Aburto Mantilla.
 """
 from fractions import Fraction
 from core.eliminacion_gaussiana import reducir_por_filas
@@ -154,3 +156,38 @@ def determinante_reduccion(A):
         pasos.append(f"Det = " + " * ".join(diag_str) + f" = {formato_numero(det)}")
         
     return det, pasos
+
+
+# ==========================================
+# 4. REGLA DE CRAMER
+# ==========================================
+def reemplazar_columna(A, b, col):
+    """Crea una copia de A con la columna 'col' sustituida por el vector b."""
+    copia = copiar_matriz(A)
+    for i in range(len(A)):
+        copia[i][col] = b[i]
+    return copia
+
+
+def regla_de_cramer(A, b, n):
+    """Resuelve Ax = b usando la Regla de Cramer.
+    Retorna (soluciones, pasos, error_msg).
+    """
+    detA, paso_detA = determinante_cofactores(A)
+    pasos = [f"det(A) = {paso_detA}"]
+
+    if detA == 0:
+        return None, pasos, "det(A) = 0. El sistema no tiene solucion unica (Cramer no aplica)."
+
+    soluciones = []
+    for i in range(n):
+        Ai = reemplazar_columna(A, b, i)
+        detAi, paso_detAi = determinante_cofactores(Ai)
+        xi = detAi / detA
+        pasos.append(f"det(A{i+1}) = {paso_detAi}")
+        pasos.append(f"x{i+1} = det(A{i+1}) / det(A) = "
+                     f"{formato_numero(detAi)} / {formato_numero(detA)} = "
+                     f"{formato_numero(xi)}")
+        soluciones.append(xi)
+
+    return soluciones, pasos, None

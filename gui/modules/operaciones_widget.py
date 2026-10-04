@@ -1,10 +1,8 @@
 """
-Módulo de Interfaz Gráfica para Operaciones en Rn y Operaciones Matriciales.
-
-Organizado en 3 pestañas:
-  Pestaña 1 - Operaciones Vectoriales : suma, resta y escalar x vector
-  Pestaña 2 - Operaciones Matriciales : suma, resta, escalar x matriz, A·B
-  Pestaña 3 - Combinación Lineal      : verifica si b pertenece a span{v1,...,vk}
+Módulo 3: Interfaz Gráfica para Operaciones Vectoriales, Matriciales e Independencia Lineal.
+Tema: Operaciones con Matrices, Transpuesta, Inversa, Combinación e Independencia Lineal (Sesiones 9-10).
+Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
+               Antonio Esteban Vargas Ramírez, Luis Xavier Aburto Mantilla.
 """
 
 from PyQt6.QtWidgets import (
@@ -748,3 +746,38 @@ class OperacionesWidget(QWidget):
             
         self.txt_il.setText("\n".join(lineas))
 
+
+
+    def _usar_resultado_v1(self):
+        if not hasattr(self, 'ultimo_vector_resultado') or not self.ultimo_vector_resultado: return
+        v = self.ultimo_vector_resultado
+        self.spin_vec_n.setValue(len(v))
+        for i in range(len(v)):
+            self.tabla_v1.item(i, 0).setText(str(v[i]))
+            
+    def _usar_resultado_v2(self):
+        if not hasattr(self, 'ultimo_vector_resultado') or not self.ultimo_vector_resultado: return
+        v = self.ultimo_vector_resultado
+        self.spin_vec_n.setValue(len(v))
+        for i in range(len(v)):
+            self.tabla_v2.item(i, 0).setText(str(v[i]))
+            
+    def _usar_resultado_A(self):
+        if not hasattr(self, 'ultima_matriz_resultado') or not self.ultima_matriz_resultado: return
+        M = self.ultima_matriz_resultado
+        m, n = len(M), len(M[0])
+        self.spin_mA.setValue(m)
+        self.spin_nA.setValue(n)
+        for i in range(m):
+            for j in range(n):
+                self.tabla_A.item(i, j).setText(str(M[i][j]))
+                
+    def _usar_resultado_B(self):
+        if not hasattr(self, 'ultima_matriz_resultado') or not self.ultima_matriz_resultado: return
+        M = self.ultima_matriz_resultado
+        m, n = len(M), len(M[0])
+        self.spin_mB.setValue(m)
+        self.spin_nB.setValue(n)
+        for i in range(m):
+            for j in range(n):
+                self.tabla_B.item(i, j).setText(str(M[i][j]))

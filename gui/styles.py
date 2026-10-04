@@ -1,5 +1,8 @@
 ﻿"""
 Estilo visual ultra moderno (Dark Theme) para PyQt6.
+Tema: Interfaz gráfica profesional con paleta GitHub Dark.
+Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
+               Antonio Esteban Vargas Ramírez, Luis Xavier Aburto Mantilla.
 """
 
 STYLE_SHEET = """
