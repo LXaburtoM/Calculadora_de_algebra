@@ -13,7 +13,7 @@ from PyQt6.QtCore import Qt
 from fractions import Fraction
 from core.parser import formato_numero
 from core.algebra_avanzada import (
-    determinante_cofactores, determinante_reduccion, regla_de_cramer
+    determinante_cofactores, determinante_reduccion, regla_de_cramer, determinante_sarrus
 )
 from core.validadores import (
     leer_matriz_segura, leer_vector_seguro, mostrar_error, formatear_matriz
@@ -61,6 +61,9 @@ class DeterminantesWidget(QWidget):
         btn_cof = QPushButton("▶ Cofactores (Laplace)")
         btn_cof.clicked.connect(lambda: self._calcular_det("cofactores"))
         ctrl_lay.addWidget(btn_cof)
+        btn_sarrus = QPushButton("▶ Sarrus (3x3)")
+        btn_sarrus.clicked.connect(lambda: self._calcular_det("sarrus"))
+        ctrl_lay.addWidget(btn_sarrus)
         btn_red = QPushButton("▶ Reducción (Fila)")
         btn_red.setObjectName("PrimaryButton")
         btn_red.clicked.connect(lambda: self._calcular_det("reduccion"))
@@ -102,6 +105,11 @@ class DeterminantesWidget(QWidget):
         """Calcula el determinante por el método elegido."""
         n = self.spin_det_n.value()
         frac = self.chk_frac_det.isChecked()
+
+        if metodo == "sarrus" and n != 3:
+            mostrar_error(self, ["La Regla de Sarrus solo es aplicable a matrices cuadradas de orden 3x3.\nAjuste la dimensión 'n' a 3 para usar este método."])
+            return
+
         A, errores = leer_matriz_segura(self.tabla_det, n, n, "A")
         if mostrar_error(self, errores):
             return
@@ -110,6 +118,12 @@ class DeterminantesWidget(QWidget):
         if metodo == "cofactores":
             det, pasos = determinante_cofactores(A)
             lineas.append(pasos)
+        elif metodo == "sarrus":
+            det, pasos, err = determinante_sarrus(A)
+            if err:
+                mostrar_error(self, [err])
+                return
+            lineas.extend(pasos)
         else:
             det, pasos = determinante_reduccion(A)
             lineas.extend(pasos)

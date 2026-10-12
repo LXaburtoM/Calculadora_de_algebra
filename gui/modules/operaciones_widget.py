@@ -16,7 +16,8 @@ from fractions import Fraction
 
 from core.parser import parse_expresion, formato_numero
 from core.eliminacion_gaussiana import nombre_var
-from core.algebra_avanzada import inversa_matriz, evaluar_independencia_lineal
+from core.algebra_avanzada import inversa_matriz, inversa_adjunta, evaluar_independencia_lineal
+from core.validadores import formatear_matriz, mostrar_error
 from core.operaciones_matriciales import (
     sumar_vectores, restar_vectores, escalar_por_vector,
     sumar_matrices, restar_matrices, escalar_por_matriz,
@@ -254,6 +255,8 @@ class OperacionesWidget(QWidget):
             "Escalar × Matriz  (c · A)",
             "Multiplicación  (A · B)",
             "Transpuesta  (Aᵀ)",
+            "Inversa  (Gauss-Jordan)",
+            "Inversa  (Adjunta)",
         ])
         self.combo_mat_op.currentIndexChanged.connect(self._actualizar_modo_mat)
         ctrl_layout.addWidget(self.combo_mat_op)
@@ -317,13 +320,35 @@ class OperacionesWidget(QWidget):
         self.txt_mat.setReadOnly(True)
         res_lay.addWidget(self.txt_mat)
         
+        
+        btn_quick_lay = QHBoxLayout()
+        self.btn_q_trans = QPushButton('⚡ (Ans)ᵀ')
+        self.btn_q_trans.setToolTip("Aplicar Transpuesta al último resultado")
+        self.btn_q_trans.clicked.connect(self._quick_transponer)
+        
+        self.btn_q_invG = QPushButton('⚡ (Ans)⁻¹ Gauss')
+        self.btn_q_invG.setToolTip("Aplicar Inversa (Gauss) al último resultado")
+        self.btn_q_invG.clicked.connect(self._quick_inv_gauss)
+        
+        self.btn_q_invA = QPushButton('⚡ (Ans)⁻¹ Adj')
+        self.btn_q_invA.setToolTip("Aplicar Inversa (Adjunta) al último resultado")
+        self.btn_q_invA.clicked.connect(self._quick_inv_adj)
+        
+        btn_quick_lay.addWidget(self.btn_q_trans)
+        btn_quick_lay.addWidget(self.btn_q_invG)
+        btn_quick_lay.addWidget(self.btn_q_invA)
+        res_lay.addLayout(btn_quick_lay)
+
         btn_mat_lay = QHBoxLayout()
         self.btn_usar_A = QPushButton('↑ Usar resultado como Matriz A')
         self.btn_usar_A.clicked.connect(self._usar_resultado_A)
         self.btn_usar_B = QPushButton('↑ Usar resultado como Matriz B')
         self.btn_usar_B.clicked.connect(self._usar_resultado_B)
+        self.btn_limpiar = QPushButton('🧹 Limpiar Historial')
+        self.btn_limpiar.clicked.connect(self.txt_mat.clear)
         btn_mat_lay.addWidget(self.btn_usar_A)
         btn_mat_lay.addWidget(self.btn_usar_B)
+        btn_mat_lay.addWidget(self.btn_limpiar)
         res_lay.addLayout(btn_mat_lay)
         layout.addWidget(res_box)
 
@@ -366,7 +391,7 @@ class OperacionesWidget(QWidget):
         """Ajusta qué controles están activos según la operación elegida."""
         es_escalar = (idx == 2)
         es_transpuesta = (idx == 4)
-        es_inversa = (idx == 5)
+        es_inversa = (idx in (5, 6))
         self.le_escalar_mat.setEnabled(es_escalar)
         self.tabla_B.setEnabled(not es_escalar and not es_transpuesta and not es_inversa)
         self.spin_mB.setEnabled(not es_escalar and not es_transpuesta and not es_inversa)
@@ -439,6 +464,48 @@ class OperacionesWidget(QWidget):
             resultado, pasos, error = transpuesta_matriz(A, mA, nA)
             op_str = "Aᵀ"
             dim_res = f"{nA}×{mA}"
+        elif idx in (5, 6): # Inversa (Gauss-Jordan o Adjunta)
+            if mA != nA:
+                QMessageBox.critical(self, "Error", "La matriz A debe ser cuadrada para calcular su inversa.")
+                return
+            if idx == 5:
+                resultado, pasos, error = inversa_matriz(A, mA)
+                op_str = "A⁻¹ (Gauss-Jordan)"
+            else:
+                resultado, pasos, error = inversa_adjunta(A, mA)
+                op_str = "A⁻¹ (Adjunta)"
+            dim_res = f"{mA}×{nA}"
+            
+            if error:
+                QMessageBox.critical(self, "Error", error)
+                return
+                
+            lineas = [
+                f"OPERACIÓN MATRICIAL:  {op_str}",
+                SEP,
+                "",
+                "PROCEDIMIENTO:",
+            ]
+            lineas.extend(pasos)
+            lineas.append("")
+            lineas.append(SEP)
+            lineas.append(f"RESULTADO A⁻¹ ({dim_res}):")
+            lineas.append(self._formatear_matriz(resultado, len(resultado), len(resultado[0]), frac))
+            
+            # Comprobación de la propiedad A^-1 * A = I
+            prod, _, _ = multiplicar_matrices(resultado, A, mA, nA, nA)
+            lineas.append("")
+            lineas.append("COMPROBACIÓN DE PROPIEDAD: A⁻¹ · A = I")
+            lineas.append(self._formatear_matriz(prod, len(prod), len(prod[0]), frac))
+            es_I = all((prod[i][j] == 1 if i == j else prod[i][j] == 0) for i in range(mA) for j in range(mA))
+            if es_I:
+                lineas.append("✔ Se cumple la propiedad: A⁻¹ · A = I (Matriz Identidad).")
+            else:
+                lineas.append("✘ No se obtuvo la identidad.")
+                
+            self.ultima_matriz_resultado = resultado
+            self.txt_mat.append("\n".join(lineas) + "\n")
+            return
         else:
             B, errB = self._leer_matriz(self.tabla_B, mB, nB, "B")
             errores.extend(errB)
@@ -456,13 +523,14 @@ class OperacionesWidget(QWidget):
                 dim_res = f"{mA}×{nA}"
             else:   # idx == 3: Multiplicación A·B
                 resultado, pasos, error = multiplicar_matrices(A, B, mA, nA, nB)
-                op_str = "A · B"
+                op_str = "A × B"
                 dim_res = f"{mA}×{nB}"
 
         if error:
             QMessageBox.critical(self, "Error de dimensiones", error)
             return
 
+        nombre_resultado = f"RESULTADO ({op_str})"
         lineas = [
             f"OPERACIÓN MATRICIAL:  {op_str}",
             SEP,
@@ -472,10 +540,10 @@ class OperacionesWidget(QWidget):
         lineas.extend(pasos)
         lineas.append("")
         lineas.append(SEP)
-        lineas.append(f"RESULTADO  C  ({dim_res}):")
+        lineas.append(f"{nombre_resultado} ({dim_res}):")
         lineas.append(self._formatear_matriz(resultado, len(resultado), len(resultado[0]), frac))
         self.ultima_matriz_resultado = resultado
-        self.txt_mat.setText("\n".join(lineas))
+        self.txt_mat.append("\n".join(lineas) + "\n")
 
     # ------------------------------------------------------------------
     # PESTAÁ‘A 3: COMBINACIÓN LINEAL
@@ -747,6 +815,73 @@ class OperacionesWidget(QWidget):
         self.txt_il.setText("\n".join(lineas))
 
 
+
+
+    def _quick_transponer(self):
+        if not getattr(self, 'ultima_matriz_resultado', None): return
+        M = self.ultima_matriz_resultado
+        m, n = len(M), len(M[0])
+        res, pasos, _ = transpuesta_matriz(M, m, n)
+        
+        lineas = ["--- ACCIÓN RÁPIDA: Transpuesta (Ans)ᵀ ---", SEP]
+        lineas.extend(pasos)
+        lineas.append(f"RESULTADO ({n}x{m}):")
+        lineas.append(formatear_matriz(res, self.chk_frac_mat.isChecked()))
+        
+        self.ultima_matriz_resultado = res
+        self.txt_mat.append("\n".join(lineas) + "\n")
+        
+    def _quick_inv_gauss(self):
+        if not getattr(self, 'ultima_matriz_resultado', None): return
+        M = self.ultima_matriz_resultado
+        m, n = len(M), len(M[0])
+        if m != n: return mostrar_error(self, ["La matriz resultante no es cuadrada."])
+        
+        res, pasos, err = inversa_matriz(M, m)
+        lineas = ["--- ACCIÓN RÁPIDA: Inversa Gauss (Ans)⁻¹ ---", SEP]
+        if err:
+            lineas.append(err)
+        else:
+            lineas.extend(pasos)
+            lineas.append(f"RESULTADO ({n}x{m}):")
+            lineas.append(formatear_matriz(res, self.chk_frac_mat.isChecked()))
+            
+            # Comprobación A^-1 * A = I
+            prod, _, _ = multiplicar_matrices(res, M, m, m, m)
+            lineas.append("")
+            lineas.append("COMPROBACIÓN DE PROPIEDAD: A⁻¹ · A = I")
+            lineas.append(formatear_matriz(prod, self.chk_frac_mat.isChecked()))
+            es_I = all((prod[i][j] == 1 if i == j else prod[i][j] == 0) for i in range(m) for j in range(m))
+            lineas.append("✔ Se cumple la propiedad: A⁻¹ · A = I (Matriz Identidad)." if es_I else "✘ No se obtuvo la identidad.")
+            self.ultima_matriz_resultado = res
+            
+        self.txt_mat.append("\n".join(lineas) + "\n")
+
+    def _quick_inv_adj(self):
+        if not getattr(self, 'ultima_matriz_resultado', None): return
+        M = self.ultima_matriz_resultado
+        m, n = len(M), len(M[0])
+        if m != n: return mostrar_error(self, ["La matriz resultante no es cuadrada."])
+        
+        res, pasos, err = inversa_adjunta(M, m)
+        lineas = ["--- ACCIÓN RÁPIDA: Inversa Adjunta (Ans)⁻¹ ---", SEP]
+        if err:
+            lineas.append(err)
+        else:
+            lineas.extend(pasos)
+            lineas.append(f"RESULTADO ({n}x{m}):")
+            lineas.append(formatear_matriz(res, self.chk_frac_mat.isChecked()))
+            
+            # Comprobación A^-1 * A = I
+            prod, _, _ = multiplicar_matrices(res, M, m, m, m)
+            lineas.append("")
+            lineas.append("COMPROBACIÓN DE PROPIEDAD: A⁻¹ · A = I")
+            lineas.append(formatear_matriz(prod, self.chk_frac_mat.isChecked()))
+            es_I = all((prod[i][j] == 1 if i == j else prod[i][j] == 0) for i in range(m) for j in range(m))
+            lineas.append("✔ Se cumple la propiedad: A⁻¹ · A = I (Matriz Identidad)." if es_I else "✘ No se obtuvo la identidad.")
+            self.ultima_matriz_resultado = res
+            
+        self.txt_mat.append("\n".join(lineas) + "\n")
 
     def _usar_resultado_v1(self):
         if not hasattr(self, 'ultimo_vector_resultado') or not self.ultimo_vector_resultado: return

@@ -1,8 +1,8 @@
-"""
-Módulo de Álgebra Avanzada: Inversa, Determinantes e Independencia Lineal.
-Tema: Matriz Inversa (Sesión 10), Determinantes por cofactores y reducción (Sesión 11).
+﻿"""
+MÃ³dulo de Ãlgebra Avanzada: Inversa, Determinantes e Independencia Lineal.
+Tema: Matriz Inversa (SesiÃ³n 10), Determinantes por cofactores y reducciÃ³n (SesiÃ³n 11).
 Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
-               Antonio Esteban Vargas Ramírez, Luis Xavier Aburto Mantilla.
+               Antonio Esteban Vargas RamÃ­rez, Luis Xavier Aburto Mantilla.
 """
 from fractions import Fraction
 from core.eliminacion_gaussiana import reducir_por_filas
@@ -12,7 +12,7 @@ def copiar_matriz(A):
     return [[val for val in fila] for fila in A]
 
 # ==========================================
-# 1. MATRIZ INVERSA (vía Gauss-Jordan)
+# 1. MATRIZ INVERSA (vÃ­a Gauss-Jordan)
 # ==========================================
 def inversa_matriz(A, n):
     """
@@ -23,7 +23,7 @@ def inversa_matriz(A, n):
     for i in range(n):
         # Concatena A[i] con la fila de la identidad
         identidad = [Fraction(1) if i == j else Fraction(0) for j in range(n)]
-        A_aug.append(A[i][:] + identidad)
+        A_aug.append(A[i][:] + identidad + [Fraction(0)])
 
     # Reducimos la matriz aumentada de n x 2n
     resultado = reducir_por_filas(A_aug, n, 2*n, modo_fraccion=True)
@@ -40,15 +40,28 @@ def inversa_matriz(A, n):
     for i in range(n):
         A_inv.append(resultado["rref"][i][n:2*n])
         
-    return A_inv, resultado["pasos"], None
+    pasos_str = []
+    for p in resultado["pasos"]:
+        titulo = p.get("titulo", p.get("operacion", "Paso"))
+        desc = p.get("descripcion", "")
+        pasos_str.append(f"-> {titulo}: {desc}")
+        M = p["matriz"]
+        txts = [[formato_numero(M[i][j], True) for j in range(len(M[0]))] for i in range(len(M))]
+        ancho = max(3, max(len(c) for fila in txts for c in fila) + 1)
+        for fila in txts:
+            celdas = [c.rjust(ancho) for c in fila]
+            pasos_str.append("   [ " + "  ".join(celdas) + " ]")
+        pasos_str.append("")
+        
+    return A_inv, pasos_str, None
 
 # ==========================================
 # 2. INDEPENDENCIA LINEAL
 # ==========================================
 def evaluar_independencia_lineal(vectores, n):
     """
-    Evalúa si un conjunto de vectores es L.I. o L.D.
-    vectores: lista de k vectores, cada uno de dimensión n.
+    EvalÃºa si un conjunto de vectores es L.I. o L.D.
+    vectores: lista de k vectores, cada uno de dimensiÃ³n n.
     Arma [v1 | v2 | ... | vk | 0] y reduce.
     """
     k = len(vectores)
@@ -80,7 +93,7 @@ def menor_complementario(A, i, j):
 
 def determinante_cofactores(A):
     """
-    Calcula el determinante usando expansión por cofactores (recursivo).
+    Calcula el determinante usando expansiÃ³n por cofactores (recursivo).
     Retorna (valor, pasos textuales).
     """
     n = len(A)
@@ -111,7 +124,7 @@ def determinante_cofactores(A):
 
 def determinante_reduccion(A):
     """
-    Calcula el determinante usando operaciones elementales (triangularización).
+    Calcula el determinante usando operaciones elementales (triangularizaciÃ³n).
     Retorna (valor, pasos).
     """
     n = len(A)
@@ -191,3 +204,94 @@ def regla_de_cramer(A, b, n):
         soluciones.append(xi)
 
     return soluciones, pasos, None
+
+# ==========================================
+# 5. INVERSA POR ADJUNTA
+# ==========================================
+def inversa_adjunta(A, n):
+    """
+    Calcula la matriz inversa usando A^-1 = 1/det(A) * Adj(A).
+    Retorna (A_inv, pasos, error_msg).
+    """
+    detA, paso_detA = determinante_cofactores(A)
+    if detA == 0:
+        return None, [f"det(A) = {paso_detA}"], "La matriz NO es invertible (determinante = 0)."
+        
+    pasos = [f"1) det(A) = {paso_detA}", "2) Matriz de Cofactores (C):"]
+    
+    # Calcular matriz de cofactores
+    C = []
+    for i in range(n):
+        fila = []
+        for j in range(n):
+            signo = 1 if (i + j) % 2 == 0 else -1
+            sub = menor_complementario(A, i, j)
+            sub_det, _ = determinante_cofactores(sub)
+            fila.append(signo * sub_det)
+        C.append(fila)
+        pasos.append(f"   Fila {i+1}: " + "  ".join(formato_numero(x) for x in fila))
+        
+    # Calcular adjunta (Transpuesta de cofactores)
+    Adj = []
+    pasos.append("3) Matriz Adjunta (C^T):")
+    for j in range(n):
+        fila = [C[i][j] for i in range(n)]
+        Adj.append(fila)
+        pasos.append(f"   Fila {j+1}: " + "  ".join(formato_numero(x) for x in fila))
+        
+    # Multiplicar por 1/detA
+    A_inv = []
+    pasos.append(f"4) A^-1 = 1/det(A) * Adj(A):")
+    for i in range(n):
+        fila = [Adj[i][j] / detA for j in range(n)]
+        A_inv.append(fila)
+        pasos.append(f"   Fila {i+1}: " + "  ".join(formato_numero(x) for x in fila))
+        
+    return A_inv, pasos, None
+
+
+# ==========================================
+# 6. REGLA DE SARRUS (3x3)
+# ==========================================
+def determinante_sarrus(A):
+    """
+    Calcula el determinante de una matriz 3x3 usando la Regla de Sarrus.
+    Retorna (det, pasos, error_msg).
+    """
+    if len(A) != 3 or len(A[0]) != 3:
+        return None, [], "La Regla de Sarrus solo es aplicable a matrices cuadradas de 3x3."
+        
+    d1 = A[0][0] * A[1][1] * A[2][2]
+    d2 = A[0][1] * A[1][2] * A[2][0]
+    d3 = A[0][2] * A[1][0] * A[2][1]
+    suma_desc = d1 + d2 + d3
+    
+    u1 = A[2][0] * A[1][1] * A[0][2]
+    u2 = A[2][1] * A[1][2] * A[0][0]
+    u3 = A[2][2] * A[1][0] * A[0][1]
+    suma_asc = u1 + u2 + u3
+    
+    det = suma_desc - suma_asc
+    
+    pasos = [
+        "1) Extensión de las dos primeras columnas a la derecha:",
+        f"   | {formato_numero(A[0][0])}  {formato_numero(A[0][1])}  {formato_numero(A[0][2])} | {formato_numero(A[0][0])}  {formato_numero(A[0][1])}",
+        f"   | {formato_numero(A[1][0])}  {formato_numero(A[1][1])}  {formato_numero(A[1][2])} | {formato_numero(A[1][0])}  {formato_numero(A[1][1])}",
+        f"   | {formato_numero(A[2][0])}  {formato_numero(A[2][1])}  {formato_numero(A[2][2])} | {formato_numero(A[2][0])}  {formato_numero(A[2][1])}",
+        "",
+        "2) Diagonales descendentes (↘ suman):",
+        f"   d1 = ({formato_numero(A[0][0])})*({formato_numero(A[1][1])})*({formato_numero(A[2][2])}) = {formato_numero(d1)}",
+        f"   d2 = ({formato_numero(A[0][1])})*({formato_numero(A[1][2])})*({formato_numero(A[2][0])}) = {formato_numero(d2)}",
+        f"   d3 = ({formato_numero(A[0][2])})*({formato_numero(A[1][0])})*({formato_numero(A[2][1])}) = {formato_numero(d3)}",
+        f"   Suma (↘) = {formato_numero(d1)} + {formato_numero(d2)} + {formato_numero(d3)} = {formato_numero(suma_desc)}",
+        "",
+        "3) Diagonales ascendentes (↗ restan):",
+        f"   u1 = ({formato_numero(A[2][0])})*({formato_numero(A[1][1])})*({formato_numero(A[0][2])}) = {formato_numero(u1)}",
+        f"   u2 = ({formato_numero(A[2][1])})*({formato_numero(A[1][2])})*({formato_numero(A[0][0])}) = {formato_numero(u2)}",
+        f"   u3 = ({formato_numero(A[2][2])})*({formato_numero(A[1][0])})*({formato_numero(A[0][1])}) = {formato_numero(u3)}",
+        f"   Suma (↗) = {formato_numero(u1)} + {formato_numero(u2)} + {formato_numero(u3)} = {formato_numero(suma_asc)}",
+        "",
+        "4) det(A) = (Suma ↘) - (Suma ↗):",
+        f"   det(A) = ({formato_numero(suma_desc)}) - ({formato_numero(suma_asc)}) = {formato_numero(det)}"
+    ]
+    return det, pasos, None

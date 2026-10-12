@@ -157,6 +157,7 @@ class VerificadorWidget(QWidget):
         frac = self.chk_frac.isChecked()
 
         reporte = ["REPORTE DE VERIFICACIÓN DE PROPIEDADES", SEP, ""]
+        reporte += self._prop_identidad(A, A_inv, n, frac)
         reporte += self._prop1(A, A_inv, n, frac)
         reporte += self._prop2(A, B, A_inv, B_inv, n, frac)
         reporte += self._prop3(A, A_inv, n, frac)
@@ -170,6 +171,20 @@ class VerificadorWidget(QWidget):
     def _veredicto(self, cumple):
         """Retorna la línea de texto con el checkmark correspondiente."""
         return "   ✔ Se cumple." if cumple else "   ✘ No se cumple."
+
+    def _prop_identidad(self, A, A_inv, n, frac):
+        """Propiedad fundamental: A⁻¹ · A = I."""
+        Ainv_A, _, _ = multiplicar_matrices(A_inv, A, n, n, n)
+        I_esp = [[Fraction(1) if i == j else Fraction(0) for j in range(n)] for i in range(n)]
+        cumple = comparar_matrices(Ainv_A, I_esp)
+        return [
+            "▶ Propiedad Fundamental: A⁻¹ · A = I (Matriz Identidad)",
+            self._veredicto(cumple),
+            "   Lado izquierdo (A⁻¹ · A):",
+            formatear_matriz(Ainv_A, frac),
+            "   Lado derecho (I):",
+            formatear_matriz(I_esp, frac), SEP
+        ]
 
     def _prop1(self, A, A_inv, n, frac):
         """Propiedad 1: (A⁻¹)⁻¹ = A."""
