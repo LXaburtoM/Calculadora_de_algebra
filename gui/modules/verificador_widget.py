@@ -83,7 +83,7 @@ class VerificadorWidget(QWidget):
         self.teclado.registrar(self.tabla_A, self.tabla_B, self.tabla_C, self.tabla_k)
         self.teclado.fin_de_entrada.connect(self.accion_principal)
 
-        self.res = TarjetaResultado()
+        self.res = TarjetaResultado(mensaje_vacio="Los resultados aparecerán aquí al evaluar las propiedades.")
         self.res.formato.cambiado.connect(self._repetir)
         self.chk_frac = self.res.formato
         self.txt_res = self.res.texto

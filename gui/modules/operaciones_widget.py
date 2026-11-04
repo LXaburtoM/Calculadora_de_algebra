@@ -14,7 +14,7 @@ from fractions import Fraction
 from core.parser import parse_expresion, formato_numero
 from core.eliminacion_gaussiana import nombre_var
 from core.algebra_avanzada import inversa_matriz, inversa_adjunta, evaluar_independencia_lineal
-from core.validadores import formatear_matriz, mostrar_error
+from core.validadores import formatear_matriz
 from core.operaciones_matriciales import (
     sumar_vectores, restar_vectores, escalar_por_vector,
     sumar_matrices, restar_matrices, escalar_por_matriz,
@@ -22,7 +22,7 @@ from core.operaciones_matriciales import (
 )
 from gui.componentes import BotonIcono, ControlSegmentado
 from gui.entrada import (
-    SelectorDimension, TablaMatriz, TecladoMatematico, TarjetaResultado,
+    SelectorDimension, TablaMatriz, mostrar_error, TecladoMatematico, TarjetaResultado,
     grupo_dimensiones, boton_principal, contenedor_fila, pagina_seccion, tarjeta_tabla
 )
 
@@ -161,7 +161,7 @@ class OperacionesWidget(QWidget):
         self.teclado_vec.registrar(self.tabla_c_vec, self.tabla_v1, self.tabla_v2)
         self.teclado_vec.fin_de_entrada.connect(self._calcular_vectores)
 
-        self.res_vec = TarjetaResultado()
+        self.res_vec = TarjetaResultado(mensaje_vacio="Los resultados aparecerán aquí al calcular la operación.")
         self.res_vec.formato.cambiado.connect(lambda: self._repetir(self.res_vec, self._calcular_vectores))
         self.res_vec.agregar_accion("Usar como v₁", "Copiar el resultado en v₁", self._usar_resultado_v1)
         self.res_vec.agregar_accion("Usar como v₂", "Copiar el resultado en v₂", self._usar_resultado_v2)
@@ -271,8 +271,8 @@ class OperacionesWidget(QWidget):
         self.combo_ejemplos = _combo(EJEMPLOS_MATRICES, "Ejemplos de clase (Sesión 9): se cargan y resuelven")
         self.combo_ejemplos.view().setMinimumWidth(340)
 
-        self.tabla_A = TablaMatriz(filas_visibles=5, expandir=True)
-        self.tabla_B = TablaMatriz(filas_visibles=5, expandir=True)
+        self.tabla_A = TablaMatriz(filas_visibles=5, expandir=True, encabezado_filas=False)
+        self.tabla_B = TablaMatriz(filas_visibles=5, expandir=True, encabezado_filas=False)
         self.tabla_c_mat = self._escalar()
         self.tarjeta_A = tarjeta_tabla("A", self.tabla_A)
         self.tarjeta_B = tarjeta_tabla("B", self.tabla_B)
@@ -284,7 +284,7 @@ class OperacionesWidget(QWidget):
         self.teclado_mat.fin_de_entrada.connect(self._calcular_matrices)
 
         # Resultados: historial con acciones sobre el último resultado (Ans)
-        self.res_mat = TarjetaResultado()
+        self.res_mat = TarjetaResultado(mensaje_vacio="Los resultados aparecerán aquí al calcular la operación.")
         self.chk_frac_mat = self.res_mat.formato
         self.txt_mat = self.res_mat.texto
 
@@ -512,14 +512,14 @@ class OperacionesWidget(QWidget):
         dims = grupo_dimensiones(["  ℝ", self.spin_cl_n, "   k =", self.spin_cl_k])
         dims.setToolTip("Dimensión ℝⁿ y número de vectores k")
 
-        self.tabla_cl = TablaMatriz(filas_visibles=6, expandir=True)
+        self.tabla_cl = TablaMatriz(filas_visibles=6, expandir=True, encabezado_filas=False)
         tarjeta = tarjeta_tabla("[v₁ | … | vₖ | b]", self.tabla_cl,
                                       "Cada columna es un vector; la última columna es b")
         self.teclado_cl = TecladoMatematico()
         self.teclado_cl.registrar(self.tabla_cl)
         self.teclado_cl.fin_de_entrada.connect(self._verificar_cl)
 
-        self.res_cl = TarjetaResultado()
+        self.res_cl = TarjetaResultado(mensaje_vacio="Los resultados aparecerán aquí al verificar la combinación lineal.")
         self.res_cl.formato.cambiado.connect(lambda: self._repetir(self.res_cl, self._verificar_cl))
         self.chk_frac_cl = self.res_cl.formato
         self.txt_cl = self.res_cl.texto
@@ -643,13 +643,13 @@ class OperacionesWidget(QWidget):
         dims = grupo_dimensiones(["  ℝ", self.spin_il_n, "   k =", self.spin_il_k])
         dims.setToolTip("Dimensión ℝⁿ y número de vectores k")
 
-        self.tabla_il = TablaMatriz(filas_visibles=6, expandir=True)
+        self.tabla_il = TablaMatriz(filas_visibles=6, expandir=True, encabezado_filas=False)
         tarjeta = tarjeta_tabla("[v₁ | v₂ | … | vₖ]", self.tabla_il, "Cada columna es un vector")
         self.teclado_il = TecladoMatematico()
         self.teclado_il.registrar(self.tabla_il)
         self.teclado_il.fin_de_entrada.connect(self._evaluar_il)
 
-        self.res_il = TarjetaResultado(formato=False)
+        self.res_il = TarjetaResultado(formato=False, mensaje_vacio="Los resultados aparecerán aquí al evaluar los vectores.")
         self.txt_il = self.res_il.texto
 
         self.spin_il_n.valueChanged.connect(self._actualizar_tabla_il)

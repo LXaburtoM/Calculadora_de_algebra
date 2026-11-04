@@ -9,14 +9,16 @@ from PyQt6.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QPushButton, QToolButton,
     QTableWidget, QTableWidgetItem, QComboBox, QFrame, QSizePolicy, QApplication, QLineEdit,
     QHeaderView, QAbstractItemView, QAbstractItemDelegate, QTextEdit, QSplitter,
-    QStyledItemDelegate
+    QStyledItemDelegate, QStyleOptionViewItem, QStyle
 )
-from PyQt6.QtGui import QPen, QColor
+from PyQt6.QtGui import QPen, QColor, QFont
 from PyQt6.QtCore import Qt, QSize, pyqtSignal
 from fractions import Fraction
 from PyQt6.QtWidgets import QMessageBox
 from core.parser import parse_expresion
-from gui.componentes import BotonIcono, ControlSegmentado, Tarjeta, icono
+from gui.componentes import BotonIcono, ControlSegmentado, Tarjeta, EstadoVacio, icono
+from gui.animaciones import aparecer, NORMAL
+from gui import sonido
 
 DIM_MAX = 10
 ALTO_FILA = 44
@@ -92,7 +94,7 @@ def grupo_dimensiones(partes):
     marco.setObjectName("Dims")
     marco.setFixedHeight(32)
     lay = QHBoxLayout(marco)
-    lay.setContentsMargins(2, 2, 6, 2)
+    lay.setContentsMargins(2, 2, 8, 2)
     lay.setSpacing(0)
     for p in partes:
         if isinstance(p, str):
@@ -115,8 +117,16 @@ class SelectorFormato(ControlSegmentado):
         return self.indice() == 0
 
 
+def _partes_numero(texto):
+    """Separa '12.5' en ('12', '.5') y '3/4' en ('3', '/4') para alinear por el separador."""
+    for i, caracter in enumerate(texto):
+        if caracter in "./,":
+            return texto[:i], texto[i:]
+    return texto, ""
+
+
 class DelegadoCuadricula(QStyledItemDelegate):
-    """Dibuja solo las líneas entre celdas.
+    """Dibuja las celdas: números alineados por el separador decimal y solo líneas internas.
 
     La cuadrícula de Qt pinta también el borde derecho e inferior de la última
     columna y fila, que se superponen con el marco redondeado de la tabla y se
@@ -128,9 +138,39 @@ class DelegadoCuadricula(QStyledItemDelegate):
         self.tabla = tabla
         self.color = QColor("#2A2B30")
 
+    def _anchos_columna(self, columna, metricas):
+        """Ancho máximo de la parte entera y de la parte decimal en la columna."""
+        izq = der = 0
+        for fila in range(self.tabla.rowCount()):
+            item = self.tabla.item(fila, columna)
+            entero, decimal = _partes_numero(item.text() if item else "")
+            izq = max(izq, metricas.horizontalAdvance(entero))
+            der = max(der, metricas.horizontalAdvance(decimal))
+        return izq, der
+
     def paint(self, pintor, opcion, indice):
-        super().paint(pintor, opcion, indice)
+        opt = QStyleOptionViewItem(opcion)
+        self.initStyleOption(opt, indice)
+        texto, opt.text = opt.text, ""
+        estilo = opt.widget.style() if opt.widget else QApplication.style()
+        estilo.drawControl(QStyle.ControlElement.CE_ItemViewItem, opt, pintor, opt.widget)
+
+        # Bloque centrado en la celda con el separador en la misma x para toda la columna
         r = opcion.rect
+        metricas = opt.fontMetrics
+        izq, der = self._anchos_columna(indice.column(), metricas)
+        separador = r.center().x() - (izq + der) // 2 + izq
+        entero, decimal = _partes_numero(texto)
+        pintor.save()
+        pintor.setFont(opt.font)
+        pintor.setPen(opt.palette.color(opt.palette.ColorRole.Text))
+        alto = r.height()
+        pintor.drawText(separador - metricas.horizontalAdvance(entero), r.top(), metricas.horizontalAdvance(entero), alto,
+                        Qt.AlignmentFlag.AlignVCenter, entero)
+        if decimal:
+            pintor.drawText(separador, r.top(), metricas.horizontalAdvance(decimal), alto,
+                            Qt.AlignmentFlag.AlignVCenter, decimal)
+        pintor.restore()
         pintor.save()
         pintor.setPen(QPen(self.color, 1))
         if indice.column() < self.tabla.columnCount() - 1:
@@ -163,6 +203,9 @@ class TablaMatriz(QTableWidget):
                            QSizePolicy.Policy.Expanding if expandir else QSizePolicy.Policy.Fixed)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setShowGrid(False)
+        fuente = self.font()
+        fuente.setFeature(QFont.Tag("tnum"), 1)   # cifras de ancho fijo: las columnas no bailan
+        self.setFont(fuente)
         self.delegado = DelegadoCuadricula(self)
         self.setItemDelegate(self.delegado)
 
@@ -312,7 +355,7 @@ class TecladoMatematico(Tarjeta):
         self.cabecera.addStretch()
 
         grid = QGridLayout()
-        grid.setSpacing(6)
+        grid.setSpacing(8)
         grid.setColumnMinimumWidth(3, 4)
         grid.setColumnMinimumWidth(8, 4)
         for c in (0, 1, 2, 4, 5, 6, 7):
@@ -354,6 +397,7 @@ class TecladoMatematico(Tarjeta):
         b.setCursor(Qt.CursorShape.PointingHandCursor)
         b.setMinimumHeight(30)
         b.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        b.pressed.connect(sonido.reproducir)
         return b
 
     def _cambiar_juego(self, indice):
@@ -363,7 +407,7 @@ class TecladoMatematico(Tarjeta):
 
     def aplicar_tema(self, paleta):
         self.tecla_borrar.setIcon(icono("retroceso", paleta["muted"], 22))
-        self.tecla_enter.setIcon(icono("enter", "#FFFFFF", 22))
+        self.tecla_enter.setIcon(icono("enter", paleta.get("on_red", "#FFFFFF"), 22))
 
     # ── Tablas conectadas ───────────────────────────────────────────
 
@@ -443,8 +487,8 @@ class Resumen(QFrame):
         super().__init__(parent)
         self.setObjectName("Summary")
         lay = QHBoxLayout(self)
-        lay.setContentsMargins(12, 10, 14, 10)
-        lay.setSpacing(10)
+        lay.setContentsMargins(12, 8, 16, 8)
+        lay.setSpacing(8)
         self.punto = QLabel()
         self.punto.setObjectName("Dot")
         self.punto.setFixedSize(8, 8)
@@ -470,7 +514,9 @@ class Resumen(QFrame):
         for lbl in (self.titulo, self.valor):
             lbl.ensurePolished()
             lbl.setMinimumWidth(lbl.sizeHint().width())
-        self.setVisible(True)
+        if self.isHidden():
+            self.setVisible(True)
+            aparecer(self, NORMAL)
 
 
 def boton_principal(texto, tooltip, al_pulsar):
@@ -479,6 +525,7 @@ def boton_principal(texto, tooltip, al_pulsar):
     b.setObjectName("PrimaryButton")
     b.setToolTip(tooltip)
     b.setCursor(Qt.CursorShape.PointingHandCursor)
+    b.pressed.connect(sonido.reproducir)
     b.clicked.connect(al_pulsar)
     return b
 
@@ -498,7 +545,7 @@ def contenedor_fila(*widgets, espacio=8):
 class TarjetaResultado(Tarjeta):
     """Resultado de una sección: resumen, acciones sobre el resultado (Ans) y detalle."""
 
-    def __init__(self, formato=True, parent=None):
+    def __init__(self, formato=True, mensaje_vacio="Los resultados aparecerán aquí al calcular.", parent=None):
         super().__init__("Resultado", parent)
         self.cabecera.addStretch()
         self.formato = SelectorFormato() if formato else None
@@ -507,6 +554,7 @@ class TarjetaResultado(Tarjeta):
         self.texto = QTextEdit()
         self.texto.setReadOnly(True)
         self.texto.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+        self.estado_vacio = EstadoVacio(self.texto, mensaje_vacio)
         self.btn_copiar = BotonIcono("copiar", "Copiar resultado", 16)
         self.btn_copiar.clicked.connect(lambda: QApplication.clipboard().setText(self.texto.toPlainText()))
         self.cabecera.addWidget(self.btn_copiar)
@@ -552,8 +600,8 @@ def pagina_seccion(controles, columna, resultados):
     """
     pagina = QWidget()
     lay = QVBoxLayout(pagina)
-    lay.setContentsMargins(12, 10, 12, 12)
-    lay.setSpacing(10)
+    lay.setContentsMargins(12, 8, 12, 12)
+    lay.setSpacing(8)
     fila = QHBoxLayout()
     fila.setSpacing(8)
     for c in controles:

@@ -13,7 +13,7 @@ from fractions import Fraction
 from core.parser import parse_expresion, formato_numero
 from core.transformaciones_lineales import analizar_transformacion_completa
 from core.eliminacion_gaussiana import nombre_var
-from gui.componentes import BotonIcono, PestanasSegmentadas, Tarjeta
+from gui.componentes import EstadoVacio, BotonIcono, PestanasSegmentadas, Tarjeta
 from gui.entrada import (
     SelectorDimension, SelectorFormato, TablaMatriz, TecladoMatematico, Resumen,
     grupo_dimensiones, boton_principal, contenedor_fila
@@ -70,7 +70,7 @@ class TransformacionesWidget(QWidget):
         self.btn_limpiar = BotonIcono("borrar", "Limpiar todo", 16)
         self.btn_limpiar.clicked.connect(self.limpiar_tablas)
         tarjeta_A.agregar_a_cabecera(self.btn_limpiar)
-        self.tabla_A = TablaMatriz(filas_visibles=6, expandir=True)
+        self.tabla_A = TablaMatriz(filas_visibles=6, expandir=True, encabezado_filas=False)
         tarjeta_A.lay.addWidget(self.tabla_A)
         izq.addWidget(tarjeta_A, 1)
 
@@ -130,6 +130,7 @@ class TransformacionesWidget(QWidget):
     def _nueva_pestania(self, titulo):
         txt = QTextEdit()
         txt.setReadOnly(True)
+        EstadoVacio(txt, "Los resultados aparecerán aquí al analizar la transformación.")
         txt.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
         self.tabs.addTab(txt, titulo)
         return txt

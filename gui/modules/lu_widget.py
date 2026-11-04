@@ -117,7 +117,7 @@ class LUWidget(QWidget):
         self.teclado.registrar(self.tabla)
         self.teclado.fin_de_entrada.connect(self.accion_principal)
 
-        self.res = TarjetaResultado()
+        self.res = TarjetaResultado(mensaje_vacio="Los resultados aparecerán aquí al factorizar o resolver.")
         self.res.formato.cambiado.connect(self._repetir_ultima_accion)
         self.chk_frac = self.res.formato
         self.txt_salida = self.res.texto

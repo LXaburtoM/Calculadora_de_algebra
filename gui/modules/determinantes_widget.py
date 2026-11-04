@@ -10,10 +10,10 @@ from core.algebra_avanzada import (
     determinante_cofactores, determinante_reduccion, regla_de_cramer, determinante_sarrus
 )
 from core.eliminacion_gaussiana import nombre_var
-from core.validadores import leer_matriz_segura, formatear_matriz
+from core.validadores import formatear_matriz
 from gui.componentes import ControlSegmentado
 from gui.entrada import (
-    SelectorDimension, TablaMatriz, TecladoMatematico, TarjetaResultado,
+    SelectorDimension, TablaMatriz, leer_matriz_segura, TecladoMatematico, TarjetaResultado,
     grupo_dimensiones, boton_principal, contenedor_fila, pagina_seccion, tarjeta_tabla
 )
 
@@ -95,7 +95,7 @@ class DeterminantesWidget(QWidget):
         self.teclado_det.registrar(self.tabla_det)
         self.teclado_det.fin_de_entrada.connect(self.accion_principal)
 
-        self.res_det = TarjetaResultado()
+        self.res_det = TarjetaResultado(mensaje_vacio="Los resultados aparecerán aquí al calcular el determinante.")
         self.res_det.formato.cambiado.connect(lambda: self._repetir(self.res_det, self.accion_principal))
         self.chk_frac_det = self.res_det.formato
         self.txt_det = self.res_det.texto
@@ -169,7 +169,7 @@ class DeterminantesWidget(QWidget):
         self.teclado_cr.registrar(self.tabla_cr)
         self.teclado_cr.fin_de_entrada.connect(self.accion_principal)
 
-        self.res_cr = TarjetaResultado()
+        self.res_cr = TarjetaResultado(mensaje_vacio="Los resultados aparecerán aquí al resolver el sistema.")
         self.res_cr.formato.cambiado.connect(lambda: self._repetir(self.res_cr, self._resolver_cramer))
         self.chk_frac_cr = self.res_cr.formato
         self.txt_cramer = self.res_cr.texto

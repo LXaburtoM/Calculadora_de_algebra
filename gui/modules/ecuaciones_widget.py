@@ -18,7 +18,7 @@ from core.eliminacion_gaussiana import (
     nombre_var, entradas_principales
 )
 from core.modelos_aplicados import MODELOS
-from gui.componentes import BotonIcono, ControlSegmentado, PestanasSegmentadas, Tarjeta
+from gui.componentes import EstadoVacio, BotonIcono, ControlSegmentado, PestanasSegmentadas, Tarjeta
 from gui.entrada import (
     SelectorDimension, SelectorFormato, TablaMatriz, TecladoMatematico, Resumen,
     grupo_dimensiones, boton_principal, contenedor_fila
@@ -159,6 +159,7 @@ class EcuacionesWidget(QWidget):
     def _nueva_pestania(self, titulo):
         txt = QTextEdit()
         txt.setReadOnly(True)
+        EstadoVacio(txt, "Los resultados aparecerán aquí al resolver el sistema.")
         txt.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
         self.tabs.addTab(txt, titulo)
         return txt

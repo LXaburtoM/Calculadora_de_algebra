@@ -1,16 +1,18 @@
 ﻿"""
-Punto de Entrada Principal de la Calculadora de Ãlgebra Lineal.
-Tema: Proyecto Integrador de Ãlgebra Lineal (MTM0120).
+Punto de Entrada Principal de la Calculadora de Álgebra Lineal.
+Tema: Proyecto Integrador de Álgebra Lineal (MTM0120).
 Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
-               Antonio Esteban Vargas RamÃ­rez, Luis Xavier Aburto Mantilla.
+               Antonio Esteban Vargas Ramírez, Luis Xavier Aburto Mantilla.
 """
 
 import sys
 from PyQt6.QtWidgets import QApplication
 from gui.main_window import MainWindow
+from gui.fuentes import aplicar_fuente
 
 def main():
     app = QApplication(sys.argv)
+    aplicar_fuente(app)
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
