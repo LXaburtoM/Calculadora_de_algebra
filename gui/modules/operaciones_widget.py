@@ -6,8 +6,7 @@ Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
 """
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QMessageBox, QComboBox, QSplitter,
-    QStackedWidget, QToolButton, QMenu, QApplication
+    QWidget, QVBoxLayout, QHBoxLayout, QMessageBox, QComboBox, QStackedWidget
 )
 from PyQt6.QtCore import Qt
 from fractions import Fraction
@@ -21,10 +20,10 @@ from core.operaciones_matriciales import (
     sumar_matrices, restar_matrices, escalar_por_matriz,
     multiplicar_matrices, transpuesta_matriz, es_combinacion_lineal
 )
-from gui.componentes import BotonIcono, ControlSegmentado, Tarjeta
+from gui.componentes import BotonIcono, ControlSegmentado
 from gui.entrada import (
-    SelectorDimension, SelectorFormato, TablaMatriz, TecladoMatematico, Resumen,
-    grupo_dimensiones, boton_principal, contenedor_fila
+    SelectorDimension, TablaMatriz, TecladoMatematico, TarjetaResultado,
+    grupo_dimensiones, boton_principal, contenedor_fila, pagina_seccion, tarjeta_tabla
 )
 
 SEP = "-" * 60
@@ -111,74 +110,16 @@ class OperacionesWidget(QWidget):
         self.paginas.setCurrentIndex(idx)
         self.btn_calcular.setText("Evaluar" if idx == 3 else ("Verificar" if idx == 2 else "Calcular"))
 
-    def _pagina(self, controles, izquierda, resultados):
-        """Fila de controles de la sección + columna de entrada | resultados."""
-        pagina = QWidget()
-        lay = QVBoxLayout(pagina)
-        lay.setContentsMargins(12, 10, 12, 12)
-        lay.setSpacing(10)
-        fila = QHBoxLayout()
-        fila.setSpacing(8)
-        for c in controles:
-            fila.addWidget(c)
-        fila.addStretch()
-        lay.addLayout(fila)
-
-        divisor = QSplitter(Qt.Orientation.Horizontal)
-        divisor.setHandleWidth(12)
-        divisor.setChildrenCollapsible(False)
-        col = QWidget()
-        cl = QVBoxLayout(col)
-        cl.setContentsMargins(0, 0, 0, 0)
-        cl.setSpacing(12)
-        for w, estira in izquierda:
-            if w is None:
-                cl.addStretch(estira)
-            else:
-                cl.addWidget(w, estira)
-        divisor.addWidget(col)
-        divisor.addWidget(resultados)
-        divisor.setSizes([600, 600])
-        lay.addWidget(divisor, 1)
-        return pagina
-
-    def _tarjeta_tabla(self, titulo, tabla, tooltip=""):
-        t = Tarjeta(titulo)
-        if tooltip:
-            t.setToolTip(tooltip)
-        t.lay.addWidget(tabla)
-        return t
-
-    def _tarjeta_resultado(self, formato=True):
-        """Tarjeta de resultados: resumen, texto y botones de cabecera."""
-        t = Tarjeta("Resultado")
-        t.cabecera.addStretch()
-        t.formato = None
-        if formato:
-            t.formato = SelectorFormato()
-            t.cabecera.addWidget(t.formato)
-        t.texto = QTextEdit()
-        t.texto.setReadOnly(True)
-        t.texto.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
-        t.btn_copiar = BotonIcono("copiar", "Copiar resultado", 16)
-        t.btn_copiar.clicked.connect(lambda: QApplication.clipboard().setText(t.texto.toPlainText()))
-        t.cabecera.addWidget(t.btn_copiar)
-        t.resumen = Resumen()
-        t.lay.addWidget(t.resumen)
-        t.lay.addWidget(t.texto, 1)
-        return t
-
     def _escalar(self):
-        tabla = TablaMatriz(filas_visibles=1)
-        tabla.redimensionar(1, 1, ["c"], [""])
-        tabla.verticalHeader().setVisible(False)
+        tabla = TablaMatriz(filas_visibles=1, encabezado_filas=False)
         tabla.horizontalHeader().setVisible(False)
+        tabla.redimensionar(1, 1, ["c"], [""])
         tabla.ajustar_altura()
         tabla.item(0, 0).setText("2")
         return tabla
 
     def _tarjeta_escalar(self, tabla):
-        t = self._tarjeta_tabla("c", tabla, "Escalar")
+        t = tarjeta_tabla("c", tabla, "Escalar")
         t.setFixedWidth(150)
         t.setVisible(False)
         return t
@@ -189,12 +130,12 @@ class OperacionesWidget(QWidget):
         fl.setContentsMargins(0, 0, 0, 0)
         fl.setSpacing(12)
         for t in tarjetas:
-            fl.addWidget(t, 0 if t.maximumWidth() < 1000 else 1)
+            fl.addWidget(t, 0 if t.maximumWidth() < 1000 else 1, Qt.AlignmentFlag.AlignTop)
         return fila
 
     def aplicar_tema(self, paleta):
         for t in (self.res_vec, self.res_mat, self.res_cl, self.res_il):
-            t.btn_copiar.aplicar_tema(paleta)
+            t.aplicar_tema(paleta)
         for b in (self.btn_limpiar_hist,):
             b.aplicar_tema(paleta)
         for k in (self.teclado_vec, self.teclado_mat, self.teclado_cl, self.teclado_il):
@@ -209,43 +150,31 @@ class OperacionesWidget(QWidget):
         dims = grupo_dimensiones(["  ℝ", self.spin_vec_n])
         dims.setToolTip("Dimensión de los vectores (ℝⁿ)")
 
-        self.tabla_v1 = TablaMatriz(filas_visibles=1)
-        self.tabla_v2 = TablaMatriz(filas_visibles=1)
+        self.tabla_v1 = TablaMatriz(filas_visibles=1, encabezado_filas=False)
+        self.tabla_v2 = TablaMatriz(filas_visibles=1, encabezado_filas=False)
         self.tabla_c_vec = self._escalar()
-        self.tarjeta_v1 = self._tarjeta_tabla("v₁", self.tabla_v1)
-        self.tarjeta_v2 = self._tarjeta_tabla("v₂", self.tabla_v2)
+        self.tarjeta_v1 = tarjeta_tabla("v₁", self.tabla_v1)
+        self.tarjeta_v2 = tarjeta_tabla("v₂", self.tabla_v2)
         self.tarjeta_c_vec = self._tarjeta_escalar(self.tabla_c_vec)
 
         self.teclado_vec = TecladoMatematico()
         self.teclado_vec.registrar(self.tabla_c_vec, self.tabla_v1, self.tabla_v2)
         self.teclado_vec.fin_de_entrada.connect(self._calcular_vectores)
 
-        self.res_vec = self._tarjeta_resultado()
+        self.res_vec = TarjetaResultado()
         self.res_vec.formato.cambiado.connect(lambda: self._repetir(self.res_vec, self._calcular_vectores))
-        self.btn_usar_v1 = self._boton_texto("→ v₁", "Usar resultado como v₁", self._usar_resultado_v1)
-        self.btn_usar_v2 = self._boton_texto("→ v₂", "Usar resultado como v₂", self._usar_resultado_v2)
-        self.res_vec.cabecera.insertWidget(1, self.btn_usar_v1)
-        self.res_vec.cabecera.insertWidget(2, self.btn_usar_v2)
+        self.res_vec.agregar_accion("Usar como v₁", "Copiar el resultado en v₁", self._usar_resultado_v1)
+        self.res_vec.agregar_accion("Usar como v₂", "Copiar el resultado en v₂", self._usar_resultado_v2)
         self.chk_frac_vec = self.res_vec.formato
         self.txt_vec = self.res_vec.texto
 
         self.combo_vec_op.currentIndexChanged.connect(self._actualizar_modo_vec)
         self.spin_vec_n.valueChanged.connect(self._actualizar_tablas_vec)
         self._actualizar_tablas_vec()
-        return self._pagina(
+        return pagina_seccion(
             [self.combo_vec_op, dims],
             [(self._fila(self.tarjeta_c_vec, self.tarjeta_v1), 0), (self.tarjeta_v2, 0), (None, 1), (self.teclado_vec, 0)],
             self.res_vec)
-
-    def _boton_texto(self, texto, tooltip, accion):
-        b = QToolButton()
-        b.setText(texto)
-        b.setToolTip(tooltip)
-        b.setObjectName("IconButton")
-        b.setCursor(Qt.CursorShape.PointingHandCursor)
-        b.clicked.connect(accion)
-        b.setEnabled(False)
-        return b
 
     def _repetir(self, tarjeta, calcular):
         if tarjeta.resumen.isVisible() and tarjeta.resumen.punto.property("estado") != "error":
@@ -326,8 +255,7 @@ class OperacionesWidget(QWidget):
         self.ultimo_vector_resultado = resultado
         self.txt_vec.setText("\n".join(lineas))
         self.res_vec.resumen.mostrar("ok", op_str, _vector(resultado, frac))
-        self.btn_usar_v1.setEnabled(True)
-        self.btn_usar_v2.setEnabled(True)
+        self.res_vec.acciones.setVisible(True)
 
     # ------------------------------------------------------------------
     # SECCIÓN 2: OPERACIONES MATRICIALES
@@ -346,8 +274,8 @@ class OperacionesWidget(QWidget):
         self.tabla_A = TablaMatriz(filas_visibles=5, expandir=True)
         self.tabla_B = TablaMatriz(filas_visibles=5, expandir=True)
         self.tabla_c_mat = self._escalar()
-        self.tarjeta_A = self._tarjeta_tabla("A", self.tabla_A)
-        self.tarjeta_B = self._tarjeta_tabla("B", self.tabla_B)
+        self.tarjeta_A = tarjeta_tabla("A", self.tabla_A)
+        self.tarjeta_B = tarjeta_tabla("B", self.tabla_B)
         self.tarjeta_c_mat = self._tarjeta_escalar(self.tabla_c_mat)
         fila_AB = self._fila(self.tarjeta_c_mat, self.tarjeta_A, self.tarjeta_B)
 
@@ -356,28 +284,20 @@ class OperacionesWidget(QWidget):
         self.teclado_mat.fin_de_entrada.connect(self._calcular_matrices)
 
         # Resultados: historial con acciones sobre el último resultado (Ans)
-        self.res_mat = self._tarjeta_resultado()
+        self.res_mat = TarjetaResultado()
         self.chk_frac_mat = self.res_mat.formato
         self.txt_mat = self.res_mat.texto
 
-        self.btn_ans = QToolButton()
-        self.btn_ans.setText("Ans  ▾")
-        self.btn_ans.setToolTip("Acciones con el último resultado")
-        self.btn_ans.setObjectName("IconButton")
-        self.btn_ans.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        self.btn_ans.setCursor(Qt.CursorShape.PointingHandCursor)
-        menu = QMenu(self.btn_ans)
-        menu.addAction("(Ans)ᵀ  Transpuesta", self._quick_transponer)
-        menu.addAction("(Ans)⁻¹  Inversa por Gauss-Jordan", self._quick_inv_gauss)
-        menu.addAction("(Ans)⁻¹  Inversa por adjunta", self._quick_inv_adj)
-        menu.addSeparator()
-        menu.addAction("Usar resultado como A", self._usar_resultado_A)
-        menu.addAction("Usar resultado como B", self._usar_resultado_B)
-        self.btn_ans.setMenu(menu)
-        self.btn_ans.setEnabled(False)
+        for texto, tooltip, accion in (
+            ("(Ans)ᵀ", "Transpuesta del último resultado", self._quick_transponer),
+            ("(Ans)⁻¹ Gauss-Jordan", "Inversa del último resultado por Gauss-Jordan", self._quick_inv_gauss),
+            ("(Ans)⁻¹ Adjunta", "Inversa del último resultado por adjunta", self._quick_inv_adj),
+            ("Usar como A", "Copiar el resultado en A", self._usar_resultado_A),
+            ("Usar como B", "Copiar el resultado en B", self._usar_resultado_B),
+        ):
+            self.res_mat.agregar_accion(texto, tooltip, accion)
         self.btn_limpiar_hist = BotonIcono("borrar", "Limpiar historial", 16)
         self.btn_limpiar_hist.clicked.connect(self._limpiar_historial)
-        self.res_mat.cabecera.insertWidget(1, self.btn_ans)
         self.res_mat.cabecera.addWidget(self.btn_limpiar_hist)
 
         self.combo_mat_op.currentIndexChanged.connect(self._actualizar_modo_mat)
@@ -385,14 +305,16 @@ class OperacionesWidget(QWidget):
             s.valueChanged.connect(self._actualizar_tablas_mat)
         self.combo_ejemplos.activated.connect(self._cargar_ejemplo)
         self._actualizar_tablas_mat()
-        return self._pagina(
+        return pagina_seccion(
             [self.combo_mat_op, dims_A, self.dims_B, self.combo_ejemplos],
-            [(fila_AB, 1), (None, 0), (self.teclado_mat, 1)],
+            [(fila_AB, 1), (None, 0), (self.teclado_mat, 0)],
             self.res_mat)
 
     def _limpiar_historial(self):
         self.txt_mat.clear()
         self.res_mat.resumen.setVisible(False)
+        self.res_mat.acciones.setVisible(False)
+        self.ultima_matriz_resultado = None
 
     def _cargar_ejemplo(self, idx=None):
         idx = self.combo_ejemplos.currentIndex()
@@ -472,7 +394,7 @@ class OperacionesWidget(QWidget):
     def _registrar_resultado_matriz(self, resultado, op_str, estado="ok"):
         self.ultima_matriz_resultado = resultado
         self.res_mat.resumen.mostrar(estado, op_str, f"{len(resultado)} × {len(resultado[0])}")
-        self.btn_ans.setEnabled(True)
+        self.res_mat.acciones.setVisible(True)
         self.txt_mat.verticalScrollBar().setValue(self.txt_mat.verticalScrollBar().maximum())
 
     def _calcular_matrices(self):
@@ -591,13 +513,13 @@ class OperacionesWidget(QWidget):
         dims.setToolTip("Dimensión ℝⁿ y número de vectores k")
 
         self.tabla_cl = TablaMatriz(filas_visibles=6, expandir=True)
-        tarjeta = self._tarjeta_tabla("[v₁ | … | vₖ | b]", self.tabla_cl,
+        tarjeta = tarjeta_tabla("[v₁ | … | vₖ | b]", self.tabla_cl,
                                       "Cada columna es un vector; la última columna es b")
         self.teclado_cl = TecladoMatematico()
         self.teclado_cl.registrar(self.tabla_cl)
         self.teclado_cl.fin_de_entrada.connect(self._verificar_cl)
 
-        self.res_cl = self._tarjeta_resultado()
+        self.res_cl = TarjetaResultado()
         self.res_cl.formato.cambiado.connect(lambda: self._repetir(self.res_cl, self._verificar_cl))
         self.chk_frac_cl = self.res_cl.formato
         self.txt_cl = self.res_cl.texto
@@ -605,7 +527,7 @@ class OperacionesWidget(QWidget):
         self.spin_cl_n.valueChanged.connect(self._actualizar_tabla_cl)
         self.spin_cl_k.valueChanged.connect(self._actualizar_tabla_cl)
         self._actualizar_tabla_cl()
-        return self._pagina([dims], [(tarjeta, 1), (None, 0), (self.teclado_cl, 1)], self.res_cl)
+        return pagina_seccion([dims], [(tarjeta, 1), (None, 0), (self.teclado_cl, 0)], self.res_cl)
 
     def _actualizar_tabla_cl(self):
         n = self.spin_cl_n.value()   # dimensión
@@ -722,18 +644,18 @@ class OperacionesWidget(QWidget):
         dims.setToolTip("Dimensión ℝⁿ y número de vectores k")
 
         self.tabla_il = TablaMatriz(filas_visibles=6, expandir=True)
-        tarjeta = self._tarjeta_tabla("[v₁ | v₂ | … | vₖ]", self.tabla_il, "Cada columna es un vector")
+        tarjeta = tarjeta_tabla("[v₁ | v₂ | … | vₖ]", self.tabla_il, "Cada columna es un vector")
         self.teclado_il = TecladoMatematico()
         self.teclado_il.registrar(self.tabla_il)
         self.teclado_il.fin_de_entrada.connect(self._evaluar_il)
 
-        self.res_il = self._tarjeta_resultado(formato=False)
+        self.res_il = TarjetaResultado(formato=False)
         self.txt_il = self.res_il.texto
 
         self.spin_il_n.valueChanged.connect(self._actualizar_tabla_il)
         self.spin_il_k.valueChanged.connect(self._actualizar_tabla_il)
         self._actualizar_tabla_il()
-        return self._pagina([dims], [(tarjeta, 1), (None, 0), (self.teclado_il, 1)], self.res_il)
+        return pagina_seccion([dims], [(tarjeta, 1), (None, 0), (self.teclado_il, 0)], self.res_il)
 
     def _actualizar_tabla_il(self):
         n = self.spin_il_n.value()

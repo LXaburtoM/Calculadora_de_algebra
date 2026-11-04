@@ -10,7 +10,7 @@ import tempfile
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
-    QLabel, QStackedWidget, QFrame, QApplication, QTextBrowser, QSizePolicy
+    QLabel, QStackedWidget, QFrame, QApplication, QTextBrowser, QSizePolicy, QToolButton
 )
 from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QPoint, QSettings
 from PyQt6.QtGui import QKeySequence, QShortcut, QFontDatabase
@@ -22,8 +22,10 @@ from gui.modules.lu_widget import LUWidget, TEOREMAS_LU
 from gui.modules.verificador_widget import VerificadorWidget
 from gui.styles import construir_estilo, TEMAS
 from gui.componentes import BotonIcono, ControlSegmentado, icono
+from gui.entrada import TablaMatriz
 
 ANCHO_MENU = 300
+ANCHO_RIEL = 60
 ANCHO_TEOREMAS = 400
 
 # (icono, título, subtítulo) de cada módulo, en el orden del QStackedWidget
@@ -144,7 +146,7 @@ class MainWindow(QMainWindow):
         self.central = QWidget()
         self.central.setObjectName("Central")
         self.setCentralWidget(self.central)
-        main_layout = QVBoxLayout(self.central)
+        main_layout = QHBoxLayout(self.central)
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
@@ -160,29 +162,59 @@ class MainWindow(QMainWindow):
             self.determinantes_widget, self.lu_widget, self.verificador_widget,
         ]
 
-        main_layout.addWidget(self._crear_barra_superior())
+        main_layout.addWidget(self._crear_riel())
+        columna = QVBoxLayout()
+        columna.setSpacing(0)
+        columna.addWidget(self._crear_barra_superior())
 
         self.stack = QStackedWidget()
         for w in self.modulos:
             self.stack.addWidget(w)
-        main_layout.addWidget(self.stack, 1)
+        columna.addWidget(self.stack, 1)
+        main_layout.addLayout(columna, 1)
 
         # Capas superpuestas: fondo, menú de módulos y panel de teoremas
         self.scrim = Scrim(self.cerrar_paneles, self.central)
         self.drawer = self._crear_menu()
         self.sheet = self._crear_panel_teoremas()
 
+    def _crear_riel(self):
+        """Columna fija de iconos: cambiar de módulo cuesta un solo clic."""
+        riel = QFrame()
+        riel.setObjectName("Rail")
+        riel.setFixedWidth(ANCHO_RIEL)
+        lay = QVBoxLayout(riel)
+        lay.setContentsMargins(8, 10, 8, 10)
+        lay.setSpacing(6)
+
+        self.btn_menu = BotonIcono("menu", "Menú (Ctrl+M)")
+        self.btn_menu.clicked.connect(self.abrir_menu)
+        lay.addWidget(self.btn_menu, 0, Qt.AlignmentFlag.AlignHCenter)
+        lay.addSpacing(6)
+
+        self.items_riel = []
+        for i, (ico, titulo, sub) in enumerate(MODULOS):
+            b = QToolButton()
+            b.setObjectName("RailItem")
+            b.setText(ico)
+            b.setCheckable(True)
+            b.setToolTip(f"{titulo}  ·  {sub}  (Ctrl+{i + 1})")
+            b.setAccessibleName(titulo)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            b.setFixedSize(ANCHO_RIEL - 16, ANCHO_RIEL - 16)
+            b.clicked.connect(lambda _, k=i: self.activar_modulo(k))
+            lay.addWidget(b)
+            self.items_riel.append(b)
+        lay.addStretch()
+        return riel
+
     def _crear_barra_superior(self):
         barra = QFrame()
         barra.setObjectName("TopBar")
         barra.setFixedHeight(56)
         lay = QHBoxLayout(barra)
-        lay.setContentsMargins(10, 0, 12, 0)
+        lay.setContentsMargins(16, 0, 12, 0)
         lay.setSpacing(10)
-
-        self.btn_menu = BotonIcono("menu", "Módulos (Ctrl+M)")
-        self.btn_menu.clicked.connect(self.abrir_menu)
-        lay.addWidget(self.btn_menu)
 
         self.lbl_titulo = QLabel()
         self.lbl_titulo.setObjectName("ModuleTitle")
@@ -292,6 +324,8 @@ class MainWindow(QMainWindow):
         self.lbl_titulo.setText(MODULOS[idx][1])
         for i, item in enumerate(self.items_menu):
             item.marcar(i == idx)
+        for i, b in enumerate(self.items_riel):
+            b.setChecked(i == idx)
         for i, (izq, der) in enumerate(zip(self.barras_izq, self.barras_der)):
             for w in (izq, der):
                 if w:
@@ -384,3 +418,6 @@ class MainWindow(QMainWindow):
         for w in self.modulos:
             if hasattr(w, "aplicar_tema"):
                 w.aplicar_tema(paleta)
+        # Las líneas de la cuadrícula las pinta cada tabla, no la hoja de estilo
+        for tabla in self.findChildren(TablaMatriz):
+            tabla.aplicar_tema(paleta)

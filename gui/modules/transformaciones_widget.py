@@ -77,11 +77,11 @@ class TransformacionesWidget(QWidget):
         # Vectores u y b como filas, lado a lado, para dejar el espacio vertical a A
         tarjeta_u = Tarjeta("u  →  T(u)")
         tarjeta_u.setToolTip("Vector u ∈ ℝⁿ para calcular su imagen T(u)")
-        self.tabla_u = TablaMatriz(filas_visibles=1)
+        self.tabla_u = TablaMatriz(filas_visibles=1, encabezado_filas=False)
         tarjeta_u.lay.addWidget(self.tabla_u)
         tarjeta_b = Tarjeta("b  ∈  Im(T)?")
         tarjeta_b.setToolTip("Vector b ∈ ℝᵐ: ¿existe x tal que T(x) = b?")
-        self.tabla_b = TablaMatriz(filas_visibles=1)
+        self.tabla_b = TablaMatriz(filas_visibles=1, encabezado_filas=False)
         tarjeta_b.lay.addWidget(self.tabla_b)
         fila_vectores = QHBoxLayout()
         fila_vectores.setSpacing(12)
@@ -93,7 +93,7 @@ class TransformacionesWidget(QWidget):
         self.teclado.registrar(self.tabla_A, self.tabla_u, self.tabla_b)
         self.teclado.fin_de_entrada.connect(self.accion_principal)
         izq.addStretch(0)
-        izq.addWidget(self.teclado, 1)
+        izq.addWidget(self.teclado)
 
         divisor.addWidget(izquierda)
         divisor.addWidget(self._crear_tarjeta_resultados())
