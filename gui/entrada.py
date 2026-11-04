@@ -136,7 +136,9 @@ class TablaMatriz(QTableWidget):
         self.setCurrentCell(0, 0)
 
     def ajustar_altura(self):
-        cabecera = max(self.horizontalHeader().height(), self.horizontalHeader().sizeHint().height())
+        cabecera = 0
+        if not self.horizontalHeader().isHidden():
+            cabecera = max(self.horizontalHeader().height(), self.horizontalHeader().sizeHint().height())
         filas = min(self.rowCount(), self.filas_visibles)
         caben = self.rowCount() <= self.filas_visibles
         self.setVerticalScrollBarPolicy(

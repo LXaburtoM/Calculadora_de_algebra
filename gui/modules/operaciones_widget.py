@@ -27,7 +27,7 @@ from gui.entrada import (
     grupo_dimensiones, boton_principal, contenedor_fila
 )
 
-SEP = "-" * 78
+SEP = "-" * 60
 SECCIONES = ["Vectores", "Matrices", "Comb. lineal", "Independencia"]
 
 OPERACIONES_VECTORES = [
@@ -170,6 +170,7 @@ class OperacionesWidget(QWidget):
         tabla.redimensionar(1, 1, ["c"], [""])
         tabla.verticalHeader().setVisible(False)
         tabla.horizontalHeader().setVisible(False)
+        tabla.ajustar_altura()
         tabla.item(0, 0).setText("2")
         return tabla
 

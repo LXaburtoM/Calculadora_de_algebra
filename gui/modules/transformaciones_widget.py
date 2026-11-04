@@ -19,7 +19,7 @@ from gui.entrada import (
     grupo_dimensiones, boton_principal, contenedor_fila
 )
 
-SEP = "-" * 78
+SEP = "-" * 60
 
 
 def _vector(valores, frac):
