@@ -6,11 +6,10 @@ Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
 """
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QToolButton, QTextEdit, QTextBrowser,
-    QMessageBox, QComboBox, QSplitter, QMenu, QApplication
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTextEdit, QTextBrowser,
+    QMessageBox, QComboBox, QSplitter, QApplication
 )
-from PyQt6.QtGui import QActionGroup
-from PyQt6.QtCore import Qt, QSize
+from PyQt6.QtCore import Qt
 from fractions import Fraction
 from core.parser import parse_expresion, formato_numero
 from core.eliminacion_gaussiana import (
@@ -19,9 +18,10 @@ from core.eliminacion_gaussiana import (
     nombre_var, entradas_principales
 )
 from core.modelos_aplicados import MODELOS
-from gui.componentes import BotonIcono, PestanasSegmentadas, Tarjeta, icono
+from gui.componentes import BotonIcono, ControlSegmentado, PestanasSegmentadas, Tarjeta
 from gui.entrada import (
-    SelectorDimension, SelectorFormato, TablaMatriz, TecladoMatematico, Resumen, grupo_dimensiones
+    SelectorDimension, SelectorFormato, TablaMatriz, TecladoMatematico, Resumen,
+    grupo_dimensiones, boton_principal, contenedor_fila
 )
 
 ANCHO_MIN = 5
@@ -61,39 +61,17 @@ class EcuacionesWidget(QWidget):
         self.combo_modelos.setFixedHeight(32)
         lay.addWidget(self.combo_modelos)
 
-        # Acción principal con menú de métodos
-        self.barra_der = QWidget()
-        rl = QHBoxLayout(self.barra_der)
-        rl.setContentsMargins(0, 0, 0, 0)
-        rl.setSpacing(0)
-        self.btn_resolver = QPushButton(METODOS[self.metodo])
-        self.btn_resolver.setObjectName("SplitMain")
-        self.btn_resolver.setToolTip("Resolver (Ctrl+Enter)")
-        self.btn_resolver.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_resolver.clicked.connect(self.accion_principal)
-        self.btn_metodos = QToolButton()
-        self.btn_metodos.setObjectName("SplitMenu")
-        self.btn_metodos.setToolTip("Elegir método")
-        self.btn_metodos.setIconSize(QSize(12, 12))
-        self.btn_metodos.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-        self.btn_metodos.setCursor(Qt.CursorShape.PointingHandCursor)
-
-        menu = QMenu(self.btn_metodos)
-        grupo = QActionGroup(menu)
-        self.acciones_metodo = {}
-        for clave, nombre in METODOS.items():
-            acc = menu.addAction(f"Resolver por {nombre}")
-            acc.setCheckable(True)
-            acc.setChecked(clave == self.metodo)
-            acc.triggered.connect(lambda _, k=clave: self._elegir_metodo(k))
-            grupo.addAction(acc)
-            self.acciones_metodo[clave] = acc
-        menu.addSeparator()
-        menu.addAction("¿Está en forma escalonada?", self.analizar_forma_actual)
-        self.btn_metodos.setMenu(menu)
-
-        rl.addWidget(self.btn_resolver)
-        rl.addWidget(self.btn_metodos)
+        # Método visible (1 clic resuelve con él), comprobación de forma y acción principal
+        self.selector_metodo = ControlSegmentado(list(METODOS.values()))
+        self.selector_metodo.setToolTip("Método de resolución")
+        self.selector_metodo.seleccionar(list(METODOS).index(self.metodo))
+        self.selector_metodo.cambiado.connect(lambda i: self._elegir_metodo(list(METODOS)[i]))
+        btn_forma = QPushButton("¿Escalonada?")
+        btn_forma.setToolTip("¿Está la matriz en forma escalonada?")
+        btn_forma.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_forma.clicked.connect(self.analizar_forma_actual)
+        self.btn_resolver = boton_principal("Resolver", "Resolver (Ctrl+Enter)", self.accion_principal)
+        self.barra_der = contenedor_fila(self.selector_metodo, btn_forma, self.btn_resolver)
 
     def barra_contexto(self):
         return self.barra_izq, self.barra_der
@@ -103,7 +81,6 @@ class EcuacionesWidget(QWidget):
 
     def _elegir_metodo(self, clave):
         self.metodo = clave
-        self.btn_resolver.setText(METODOS[clave])
         self.resolver_sistema(metodo=clave)
 
     # ── Cuerpo ──────────────────────────────────────────────────────
@@ -125,7 +102,7 @@ class EcuacionesWidget(QWidget):
         self.teclado.registrar(self.tabla)
         self.teclado.fin_de_entrada.connect(self.accion_principal)
         izq.addStretch(0)
-        izq.addWidget(self.teclado, 1)
+        izq.addWidget(self.teclado)
 
         divisor.addWidget(izquierda)
         divisor.addWidget(self._crear_tarjeta_resultados())
@@ -189,7 +166,6 @@ class EcuacionesWidget(QWidget):
     def aplicar_tema(self, paleta):
         for b in (self.btn_limpiar, self.btn_copiar):
             b.aplicar_tema(paleta)
-        self.btn_metodos.setIcon(icono("chevron", "#FFFFFF", 12))
         self.teclado.aplicar_tema(paleta)
 
     # ── Resultados ──────────────────────────────────────────────────

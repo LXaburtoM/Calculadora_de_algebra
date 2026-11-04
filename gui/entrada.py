@@ -6,16 +6,19 @@ Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
 """
 
 from PyQt6.QtWidgets import (
-    QWidget, QHBoxLayout, QGridLayout, QLabel, QPushButton, QTableWidget, QTableWidgetItem,
-    QComboBox, QFrame, QSizePolicy, QApplication, QLineEdit, QHeaderView,
-    QAbstractItemView, QAbstractItemDelegate
+    QWidget, QHBoxLayout, QVBoxLayout, QGridLayout, QLabel, QPushButton, QToolButton,
+    QTableWidget, QTableWidgetItem, QComboBox, QFrame, QSizePolicy, QApplication, QLineEdit,
+    QHeaderView, QAbstractItemView, QAbstractItemDelegate, QTextEdit, QSplitter,
+    QStyledItemDelegate
 )
+from PyQt6.QtGui import QPen, QColor
 from PyQt6.QtCore import Qt, QSize, pyqtSignal
-from gui.componentes import ControlSegmentado, Tarjeta, icono
+from gui.componentes import BotonIcono, ControlSegmentado, Tarjeta, icono
 
 DIM_MAX = 10
 ALTO_FILA = 44
 ALTO_FILA_MAX = 64
+ALTO_TECLADO = 216   # igual en todos los módulos: el espacio libre es para la matriz
 
 # Teclas de funciones: (etiqueta, texto que se inserta). Usan la sintaxis de core/parser.py
 TECLAS_FUNCIONES = {
@@ -53,21 +56,21 @@ class SelectorDimension(QComboBox):
 
     valueChanged = pyqtSignal(int)
 
-    def __init__(self, valor, descripcion, maximo=DIM_MAX):
+    def __init__(self, valor, descripcion, maximo=DIM_MAX, minimo=1):
         super().__init__()
-        self.maximo = maximo
-        self.addItems([str(i) for i in range(1, maximo + 1)])
-        self.setCurrentIndex(valor - 1)
+        self.minimo, self.maximo = minimo, maximo
+        self.addItems([str(i) for i in range(minimo, maximo + 1)])
+        self.setCurrentIndex(valor - minimo)
         self.setToolTip(descripcion)
         self.setAccessibleName(descripcion)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.currentIndexChanged.connect(lambda i: self.valueChanged.emit(i + 1))
+        self.currentIndexChanged.connect(lambda i: self.valueChanged.emit(i + minimo))
 
     def value(self):
-        return self.currentIndex() + 1
+        return self.currentIndex() + self.minimo
 
     def setValue(self, v):
-        self.setCurrentIndex(max(1, min(self.maximo, v)) - 1)
+        self.setCurrentIndex(max(self.minimo, min(self.maximo, v)) - self.minimo)
 
 
 def grupo_dimensiones(partes):
@@ -99,6 +102,31 @@ class SelectorFormato(ControlSegmentado):
         return self.indice() == 0
 
 
+class DelegadoCuadricula(QStyledItemDelegate):
+    """Dibuja solo las líneas entre celdas.
+
+    La cuadrícula de Qt pinta también el borde derecho e inferior de la última
+    columna y fila, que se superponen con el marco redondeado de la tabla y se
+    ven como líneas dobles.
+    """
+
+    def __init__(self, tabla):
+        super().__init__(tabla)
+        self.tabla = tabla
+        self.color = QColor("#2A2B30")
+
+    def paint(self, pintor, opcion, indice):
+        super().paint(pintor, opcion, indice)
+        r = opcion.rect
+        pintor.save()
+        pintor.setPen(QPen(self.color, 1))
+        if indice.column() < self.tabla.columnCount() - 1:
+            pintor.drawLine(r.topRight(), r.bottomRight())
+        if indice.row() < self.tabla.rowCount() - 1:
+            pintor.drawLine(r.bottomLeft(), r.bottomRight())
+        pintor.restore()
+
+
 class TablaMatriz(QTableWidget):
     """Tabla de valores: Enter confirma la celda y avanza a la siguiente.
 
@@ -109,16 +137,25 @@ class TablaMatriz(QTableWidget):
     fin_de_tabla = pyqtSignal()
     enfocada = pyqtSignal()
 
-    def __init__(self, filas_visibles=8, expandir=False, parent=None):
+    def __init__(self, filas_visibles=8, expandir=False, encabezado_filas=True, parent=None):
         super().__init__(parent)
         self.filas_visibles = filas_visibles
         self.expandir = expandir
+        # En vectores de una fila el título de la tarjeta ya dice qué es (v₁, u, b…)
+        self.verticalHeader().setVisible(encabezado_filas)
         self.verticalHeader().setDefaultSectionSize(ALTO_FILA)
         self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.setSizePolicy(QSizePolicy.Policy.Expanding,
                            QSizePolicy.Policy.Expanding if expandir else QSizePolicy.Policy.Fixed)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setShowGrid(False)
+        self.delegado = DelegadoCuadricula(self)
+        self.setItemDelegate(self.delegado)
+
+    def aplicar_tema(self, paleta):
+        self.delegado.color = QColor(paleta["sep"])
+        self.viewport().update()
 
     def redimensionar(self, filas, columnas, encabezados, etiquetas_filas):
         """Cambia el tamaño conservando los valores existentes; las celdas nuevas valen 0."""
@@ -134,7 +171,12 @@ class TablaMatriz(QTableWidget):
                     self.setItem(i, j, item)
         self.ajustar_altura()
         if self.currentItem() is None:
-            self.setCurrentCell(0, 0)
+            self._ubicar(0, 0)
+
+    def _ubicar(self, fila, col):
+        """Mueve la celda actual sin resaltarla; el resaltado aparece al enfocar la tabla."""
+        modelo = self.selectionModel()
+        modelo.setCurrentIndex(self.model().index(fila, col), modelo.SelectionFlag.NoUpdate)
 
     def limpiar(self):
         for i in range(self.rowCount()):
@@ -146,7 +188,7 @@ class TablaMatriz(QTableWidget):
         cabecera = 0
         if not self.horizontalHeader().isHidden():
             cabecera = max(self.horizontalHeader().height(), self.horizontalHeader().sizeHint().height())
-        base = cabecera + 2 * self.frameWidth() + 4
+        base = cabecera + 2 * self.frameWidth()
         filas = min(self.rowCount(), self.filas_visibles)
         if self.expandir:
             self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
@@ -216,8 +258,9 @@ class TablaMatriz(QTableWidget):
 
     def focusInEvent(self, event):
         super().focusInEvent(event)
-        if self.currentItem() is None and self.rowCount():
-            self.setCurrentCell(0, 0)
+        if self.rowCount():
+            fila, col = max(self.currentRow(), 0), max(self.currentColumn(), 0)
+            self.setCurrentCell(fila, col)
         self.enfocada.emit()
 
     def focusOutEvent(self, event):
@@ -226,8 +269,7 @@ class TablaMatriz(QTableWidget):
         if self.state() != QAbstractItemView.State.EditingState:
             fila, col = self.currentRow(), self.currentColumn()
             self.clearSelection()
-            self.selectionModel().setCurrentIndex(
-                self.model().index(fila, col), self.selectionModel().SelectionFlag.NoUpdate)
+            self._ubicar(fila, col)
 
 
 class TecladoMatematico(Tarjeta):
@@ -243,9 +285,7 @@ class TecladoMatematico(Tarjeta):
         super().__init__(parent=parent)
         self.tablas = []
         self.activa = None
-        # Tamaño acotado: el espacio extra de la ventana es para la matriz, no para las teclas
-        self.setMinimumHeight(200)
-        self.setMaximumHeight(300)
+        self.setFixedHeight(ALTO_TECLADO)
 
         self.selector = ControlSegmentado(list(TECLAS_FUNCIONES))
         self.selector.cambiado.connect(self._cambiar_juego)
@@ -293,7 +333,7 @@ class TecladoMatematico(Tarjeta):
         b.setProperty("tipo", tipo)
         b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         b.setCursor(Qt.CursorShape.PointingHandCursor)
-        b.setMinimumHeight(32)
+        b.setMinimumHeight(30)
         b.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         return b
 
@@ -315,9 +355,6 @@ class TecladoMatematico(Tarjeta):
             t.fin_de_tabla.connect(lambda tabla=t: self._siguiente_tabla(tabla))
         if self.activa is None and self.tablas:
             self.activa = self.tablas[0]
-        # Al inicio solo la primera tabla muestra la celda resaltada
-        for t in self.tablas[1:]:
-            t.clearSelection()
 
     def _activar(self, tabla):
         self.activa = tabla
@@ -396,6 +433,7 @@ class Resumen(QFrame):
         self.titulo.setObjectName("SummaryTitle")
         self.valor = QLabel()
         self.valor.setObjectName("SummaryValue")
+        self.valor.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         self.valor.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         lay.addWidget(self.punto)
         lay.addWidget(self.titulo)
@@ -434,3 +472,90 @@ def contenedor_fila(*widgets, espacio=8):
     for x in widgets:
         lay.addWidget(x)
     return w
+
+
+# ── Piezas de página para módulos con secciones ─────────────────────
+
+class TarjetaResultado(Tarjeta):
+    """Resultado de una sección: resumen, acciones sobre el resultado (Ans) y detalle."""
+
+    def __init__(self, formato=True, parent=None):
+        super().__init__("Resultado", parent)
+        self.cabecera.addStretch()
+        self.formato = SelectorFormato() if formato else None
+        if self.formato:
+            self.cabecera.addWidget(self.formato)
+        self.texto = QTextEdit()
+        self.texto.setReadOnly(True)
+        self.texto.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+        self.btn_copiar = BotonIcono("copiar", "Copiar resultado", 16)
+        self.btn_copiar.clicked.connect(lambda: QApplication.clipboard().setText(self.texto.toPlainText()))
+        self.cabecera.addWidget(self.btn_copiar)
+        self.resumen = Resumen()
+        self.lay.addWidget(self.resumen)
+        self.acciones = QWidget()
+        fila = QHBoxLayout(self.acciones)
+        fila.setContentsMargins(0, 0, 0, 0)
+        fila.setSpacing(4)
+        fila.addStretch()
+        self.acciones.setVisible(False)
+        self.lay.addWidget(self.acciones)
+        self.lay.addWidget(self.texto, 1)
+
+    def agregar_accion(self, texto, tooltip, accion):
+        """Botón de 1 clic que actúa sobre el último resultado; visible cuando hay uno."""
+        b = QToolButton()
+        b.setText(texto)
+        b.setToolTip(tooltip)
+        b.setObjectName("ActionChip")
+        b.setCursor(Qt.CursorShape.PointingHandCursor)
+        b.clicked.connect(accion)
+        fila = self.acciones.layout()
+        fila.insertWidget(fila.count() - 1, b)
+        return b
+
+    def aplicar_tema(self, paleta):
+        self.btn_copiar.aplicar_tema(paleta)
+
+
+def tarjeta_tabla(titulo, tabla, tooltip=""):
+    t = Tarjeta(titulo)
+    if tooltip:
+        t.setToolTip(tooltip)
+    t.lay.addWidget(tabla)
+    return t
+
+
+def pagina_seccion(controles, columna, resultados):
+    """Fila de controles de la sección + [columna de entrada | resultados].
+
+    `columna` es una lista de (widget, estiramiento); None como widget añade un espacio.
+    """
+    pagina = QWidget()
+    lay = QVBoxLayout(pagina)
+    lay.setContentsMargins(12, 10, 12, 12)
+    lay.setSpacing(10)
+    fila = QHBoxLayout()
+    fila.setSpacing(8)
+    for c in controles:
+        fila.addWidget(c)
+    fila.addStretch()
+    lay.addLayout(fila)
+
+    divisor = QSplitter(Qt.Orientation.Horizontal)
+    divisor.setHandleWidth(12)
+    divisor.setChildrenCollapsible(False)
+    col = QWidget()
+    cl = QVBoxLayout(col)
+    cl.setContentsMargins(0, 0, 0, 0)
+    cl.setSpacing(12)
+    for w, estira in columna:
+        if w is None:
+            cl.addStretch(estira)
+        else:
+            cl.addWidget(w, estira)
+    divisor.addWidget(col)
+    divisor.addWidget(resultados)
+    divisor.setSizes([600, 600])
+    lay.addWidget(divisor, 1)
+    return pagina
