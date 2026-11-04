@@ -183,6 +183,7 @@ QHeaderView::section {
     border: none; border-bottom: 1px solid {sep}; border-right: 1px solid {sep}; padding: 6px;
 }
 QTableCornerButton::section { background-color: {surface}; border: none; }
+QTableWidget QHeaderView { background-color: {surface}; }
 
 /* ── Texto de resultados ────────────────────────────────────── */
 QTextEdit, QPlainTextEdit {

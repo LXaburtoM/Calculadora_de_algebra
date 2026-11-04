@@ -6,13 +6,11 @@ Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
 """
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QPushButton, QToolButton,
-    QTableWidget, QTableWidgetItem, QTextEdit, QTextBrowser, QMessageBox, QHeaderView,
-    QComboBox, QFrame, QSplitter, QSizePolicy, QMenu, QApplication, QLineEdit,
-    QAbstractItemView, QAbstractItemDelegate
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QToolButton, QTextEdit, QTextBrowser,
+    QMessageBox, QComboBox, QSplitter, QMenu, QApplication
 )
 from PyQt6.QtGui import QActionGroup
-from PyQt6.QtCore import Qt, QSize, pyqtSignal
+from PyQt6.QtCore import Qt, QSize
 from fractions import Fraction
 from core.parser import parse_expresion, formato_numero
 from core.eliminacion_gaussiana import (
@@ -21,129 +19,15 @@ from core.eliminacion_gaussiana import (
     nombre_var, entradas_principales
 )
 from core.modelos_aplicados import MODELOS
-from gui.componentes import (
-    BotonIcono, ControlSegmentado, PestanasSegmentadas, Tarjeta, icono
+from gui.componentes import BotonIcono, PestanasSegmentadas, Tarjeta, icono
+from gui.entrada import (
+    SelectorDimension, SelectorFormato, TablaMatriz, TecladoMatematico, Resumen, grupo_dimensiones
 )
 
 ANCHO_MIN = 5
 SEP = "-" * 78
-DIM_MAX = 10
-ALTO_FILA = 44
 
 METODOS = {"gauss": "Gauss", "gauss_jordan": "Gauss-Jordan"}
-
-# Teclas de funciones: (etiqueta, texto que se inserta). Usan la sintaxis de core/parser.py
-TECLAS_FUNCIONES = {
-    "Básico": [
-        ("a²", "^2"), ("aᵇ", "^"), ("|a|", "abs("),
-        ("√", "raiz("), ("ⁿ√", "^(1/"), ("π", "pi"),
-        ("sen", "sen("), ("cos", "cos("), ("tan", "tan("),
-        ("(", "("), (")", ")"), ("e", "E"),
-    ],
-    "Funciones": [
-        ("ln", "ln("), ("log", "log("), ("eˣ", "E^"),
-        ("sec", "sec("), ("csc", "csc("), ("cot", "cot("),
-        ("x⁻¹", "^(-1)"), ("10ˣ", "10^"), ("|a|", "abs("),
-        ("(", "("), (")", ")"), ("π", "pi"),
-    ],
-    "Trig": [
-        ("arcsen", "arcsen("), ("arccos", "arccos("), ("arctan", "arctan("),
-        ("sen", "sen("), ("cos", "cos("), ("tan", "tan("),
-        ("arccot", "arccot("), ("cot", "cot("), ("π/2", "pi/2"),
-        ("(", "("), (")", ")"), ("π", "pi"),
-    ],
-}
-
-# Bloque numérico: (etiqueta, inserción, fila, columna, ancho, tipo)
-TECLAS_NUMERICAS = [
-    ("7", "7", 0, 4, 1, "num"), ("8", "8", 0, 5, 1, "num"), ("9", "9", 0, 6, 1, "num"), ("÷", "/", 0, 7, 1, "op"),
-    ("4", "4", 1, 4, 1, "num"), ("5", "5", 1, 5, 1, "num"), ("6", "6", 1, 6, 1, "num"), ("×", "*", 1, 7, 1, "op"),
-    ("1", "1", 2, 4, 1, "num"), ("2", "2", 2, 5, 1, "num"), ("3", "3", 2, 6, 1, "num"), ("−", "-", 2, 7, 1, "op"),
-    ("0", "0", 3, 4, 2, "num"), (".", ".", 3, 6, 1, "num"), ("+", "+", 3, 7, 1, "op"),
-]
-
-
-class SelectorDimension(QComboBox):
-    """Selector compacto de 1 a DIM_MAX con la misma interfaz que QSpinBox."""
-
-    valueChanged = pyqtSignal(int)
-
-    def __init__(self, valor, descripcion):
-        super().__init__()
-        self.addItems([str(i) for i in range(1, DIM_MAX + 1)])
-        self.setCurrentIndex(valor - 1)
-        self.setToolTip(descripcion)
-        self.setAccessibleName(descripcion)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.currentIndexChanged.connect(lambda i: self.valueChanged.emit(i + 1))
-
-    def value(self):
-        return self.currentIndex() + 1
-
-    def setValue(self, v):
-        self.setCurrentIndex(max(1, min(DIM_MAX, v)) - 1)
-
-
-class SelectorFormato(ControlSegmentado):
-    """Fracción exacta o decimal; responde a isChecked() como el checkbox anterior."""
-
-    def __init__(self):
-        super().__init__(["a/b", "0.5"])
-        self.setToolTip("Mostrar resultados como fracciones o decimales")
-
-    def isChecked(self):
-        return self.indice() == 0
-
-
-class TablaMatriz(QTableWidget):
-    """Tabla de la matriz aumentada: Enter confirma y avanza a la celda siguiente."""
-
-    enter_en_ultima = pyqtSignal()
-
-    def avanzar(self):
-        fila, col = self.currentRow(), self.currentColumn()
-        col += 1
-        if col >= self.columnCount():
-            col, fila = 0, fila + 1
-        if fila >= self.rowCount():
-            self.enter_en_ultima.emit()
-            return
-        self.setCurrentCell(fila, col)
-
-    def editor_activo(self):
-        w = QApplication.focusWidget()
-        if isinstance(w, QLineEdit) and self.state() == QAbstractItemView.State.EditingState:
-            return w
-        return None
-
-    def terminar_edicion(self):
-        editor = self.editor_activo()
-        if editor:
-            self.commitData(editor)
-            self.closeEditor(editor, QAbstractItemDelegate.EndEditHint.NoHint)
-
-    def closeEditor(self, editor, hint):
-        if hint == QAbstractItemDelegate.EndEditHint.SubmitModelCache:
-            super().closeEditor(editor, QAbstractItemDelegate.EndEditHint.NoHint)
-            self.avanzar()
-            return
-        super().closeEditor(editor, hint)
-
-    def ajustar_altura(self, filas_visibles=8):
-        cabecera = max(self.horizontalHeader().height(), self.horizontalHeader().sizeHint().height())
-        filas = min(self.rowCount(), filas_visibles)
-        self.setFixedHeight(cabecera + ALTO_FILA * filas + 2 * self.frameWidth() + 2)
-
-    def showEvent(self, event):
-        super().showEvent(event)
-        self.ajustar_altura()
-
-    def keyPressEvent(self, event):
-        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and \
-                not event.modifiers() & Qt.KeyboardModifier.ControlModifier:
-            self.avanzar()
-            return
-        super().keyPressEvent(event)
 
 
 class EcuacionesWidget(QWidget):
@@ -162,20 +46,9 @@ class EcuacionesWidget(QWidget):
         lay.setContentsMargins(0, 0, 0, 0)
         lay.setSpacing(8)
 
-        dims = QFrame()
-        dims.setObjectName("Dims")
-        dims.setFixedHeight(32)
-        dl = QHBoxLayout(dims)
-        dl.setContentsMargins(2, 2, 2, 2)
-        dl.setSpacing(0)
         self.spin_m = SelectorDimension(3, "Ecuaciones (filas)")
         self.spin_n = SelectorDimension(3, "Variables (columnas)")
-        x = QLabel("×")
-        x.setObjectName("DimsX")
-        dl.addWidget(self.spin_m)
-        dl.addWidget(x)
-        dl.addWidget(self.spin_n)
-        lay.addWidget(dims)
+        lay.addWidget(grupo_dimensiones([self.spin_m, "×", self.spin_n]))
 
         self.combo_modelos = QComboBox()
         self.combo_modelos.setToolTip("Plantillas de modelos aplicados")
@@ -248,7 +121,10 @@ class EcuacionesWidget(QWidget):
         izq.setContentsMargins(0, 0, 0, 0)
         izq.setSpacing(12)
         izq.addWidget(self._crear_tarjeta_matriz())
-        izq.addWidget(self._crear_teclado(), 1)
+        self.teclado = TecladoMatematico()
+        self.teclado.registrar(self.tabla)
+        self.teclado.fin_de_entrada.connect(self.accion_principal)
+        izq.addWidget(self.teclado, 1)
 
         divisor.addWidget(izquierda)
         divisor.addWidget(self._crear_tarjeta_resultados())
@@ -268,11 +144,6 @@ class EcuacionesWidget(QWidget):
         tarjeta.agregar_a_cabecera(self.btn_limpiar)
 
         self.tabla = TablaMatriz()
-        self.tabla.verticalHeader().setDefaultSectionSize(ALTO_FILA)
-        self.tabla.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
-        self.tabla.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.tabla.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        self.tabla.enter_en_ultima.connect(self.accion_principal)
         tarjeta.lay.addWidget(self.tabla)
 
         # Enunciado del modelo aplicado (visible al elegir un ejemplo)
@@ -282,60 +153,6 @@ class EcuacionesWidget(QWidget):
         self.lbl_modelo_info.setVisible(False)
         tarjeta.lay.addWidget(self.lbl_modelo_info)
         return tarjeta
-
-    def _crear_teclado(self):
-        tarjeta = Tarjeta()
-        tarjeta.setMinimumHeight(250)
-        self.selector_teclado = ControlSegmentado(list(TECLAS_FUNCIONES))
-        self.selector_teclado.cambiado.connect(self._cambiar_juego_teclas)
-        tarjeta.cabecera.addWidget(self.selector_teclado)
-        tarjeta.cabecera.addStretch()
-
-        grid = QGridLayout()
-        grid.setSpacing(6)
-        grid.setColumnMinimumWidth(3, 4)
-        grid.setColumnMinimumWidth(8, 4)
-        for c in (0, 1, 2, 4, 5, 6, 7):
-            grid.setColumnStretch(c, 10)
-        grid.setColumnStretch(9, 13)
-
-        self.teclas_funcion = []
-        for k in range(12):
-            b = self._tecla("", "fn")
-            b.clicked.connect(lambda _, boton=b: self._insertar(boton.property("ins")))
-            grid.addWidget(b, k // 3, k % 3)
-            self.teclas_funcion.append(b)
-        self._cambiar_juego_teclas(0)
-
-        for etiqueta, ins, fila, col, ancho, tipo in TECLAS_NUMERICAS:
-            b = self._tecla(etiqueta, tipo)
-            b.clicked.connect(lambda _, t=ins: self._insertar(t))
-            grid.addWidget(b, fila, col, 1, ancho)
-
-        self.tecla_borrar = self._tecla("", "op")
-        self.tecla_borrar.setToolTip("Borrar")
-        self.tecla_borrar.setIconSize(QSize(22, 22))
-        self.tecla_borrar.clicked.connect(self._retroceso)
-        grid.addWidget(self.tecla_borrar, 0, 9, 2, 1)
-
-        self.tecla_enter = self._tecla("", "enter")
-        self.tecla_enter.setToolTip("Siguiente celda (en la última, resuelve)")
-        self.tecla_enter.setIconSize(QSize(22, 22))
-        self.tecla_enter.clicked.connect(self._enter)
-        grid.addWidget(self.tecla_enter, 2, 9, 2, 1)
-
-        tarjeta.lay.addLayout(grid, 1)
-        return tarjeta
-
-    def _tecla(self, texto, tipo):
-        b = QPushButton(texto)
-        b.setObjectName("Key")
-        b.setProperty("tipo", tipo)
-        b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        b.setCursor(Qt.CursorShape.PointingHandCursor)
-        b.setMinimumHeight(38)
-        b.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        return b
 
     def _crear_tarjeta_resultados(self):
         tarjeta = Tarjeta()
@@ -355,25 +172,7 @@ class EcuacionesWidget(QWidget):
         self.btn_copiar.clicked.connect(self._copiar_resultado)
         tarjeta.cabecera.addWidget(self.btn_copiar)
 
-        # Resumen de una línea encima del detalle
-        self.resumen = QFrame()
-        self.resumen.setObjectName("Summary")
-        rl = QHBoxLayout(self.resumen)
-        rl.setContentsMargins(12, 10, 14, 10)
-        rl.setSpacing(10)
-        self.punto = QLabel()
-        self.punto.setObjectName("Dot")
-        self.punto.setFixedSize(8, 8)
-        self.lbl_resumen = QLabel()
-        self.lbl_resumen.setObjectName("SummaryTitle")
-        self.lbl_resumen_valor = QLabel()
-        self.lbl_resumen_valor.setObjectName("SummaryValue")
-        self.lbl_resumen_valor.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        rl.addWidget(self.punto)
-        rl.addWidget(self.lbl_resumen)
-        rl.addStretch()
-        rl.addWidget(self.lbl_resumen_valor)
-        self.resumen.setVisible(False)
+        self.resumen = Resumen()
         tarjeta.lay.addWidget(self.resumen)
 
         tarjeta.lay.addWidget(self.tabs, 1)
@@ -390,61 +189,12 @@ class EcuacionesWidget(QWidget):
         for b in (self.btn_limpiar, self.btn_copiar):
             b.aplicar_tema(paleta)
         self.btn_metodos.setIcon(icono("chevron", "#FFFFFF", 12))
-        self.tecla_borrar.setIcon(icono("retroceso", paleta["muted"], 22))
-        self.tecla_enter.setIcon(icono("enter", "#FFFFFF", 22))
-
-    # ── Teclado ─────────────────────────────────────────────────────
-
-    def _cambiar_juego_teclas(self, indice):
-        teclas = list(TECLAS_FUNCIONES.values())[indice]
-        for b, (etiqueta, ins) in zip(self.teclas_funcion, teclas):
-            b.setText(etiqueta)
-            b.setProperty("ins", ins)
-
-    def _celda_actual(self):
-        item = self.tabla.currentItem()
-        if item is None and self.tabla.rowCount():
-            self.tabla.setCurrentCell(0, 0)
-            item = self.tabla.currentItem()
-        return item
-
-    def _insertar(self, texto):
-        editor = self.tabla.editor_activo()
-        if editor:
-            editor.insert(texto)
-            return
-        item = self._celda_actual()
-        if item is None:
-            return
-        actual = item.text().strip()
-        item.setText(texto if actual in ("", "0") else actual + texto)
-        self.tabla.setFocus()
-
-    def _retroceso(self):
-        editor = self.tabla.editor_activo()
-        if editor:
-            editor.backspace()
-            return
-        item = self._celda_actual()
-        if item is not None:
-            item.setText(item.text()[:-1] or "0")
-        self.tabla.setFocus()
-
-    def _enter(self):
-        self.tabla.terminar_edicion()
-        self._celda_actual()
-        self.tabla.avanzar()
-        self.tabla.setFocus()
+        self.teclado.aplicar_tema(paleta)
 
     # ── Resultados ──────────────────────────────────────────────────
 
     def _mostrar_resumen(self, estado, titulo, valor=""):
-        self.punto.setProperty("estado", estado)
-        self.punto.style().unpolish(self.punto)
-        self.punto.style().polish(self.punto)
-        self.lbl_resumen.setText(titulo)
-        self.lbl_resumen_valor.setText(valor)
-        self.resumen.setVisible(True)
+        self.resumen.mostrar(estado, titulo, valor)
 
     def _limpiar_resultados(self):
         """Los resultados dejan de valer cuando cambia la matriz de entrada."""
@@ -469,33 +219,14 @@ class EcuacionesWidget(QWidget):
     def actualizar_tabla(self):
         m = self.spin_m.value()
         n = self.spin_n.value()
-
-        self.tabla.setRowCount(m)
-        self.tabla.setColumnCount(n + 1)
-
-        headers = [nombre_var(j) for j in range(n)] + ["b"]
-        self.tabla.setHorizontalHeaderLabels(headers)
-        self.tabla.setVerticalHeaderLabels([f"R{i + 1}" for i in range(m)])
-
-        for i in range(m):
-            for j in range(n + 1):
-                if not self.tabla.item(i, j):
-                    item = QTableWidgetItem("0")
-                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                    self.tabla.setItem(i, j, item)
-
-        self.tabla.ajustar_altura()
+        self.tabla.redimensionar(m, n + 1, [nombre_var(j) for j in range(n)] + ["b"],
+                                 [f"R{i + 1}" for i in range(m)])
         self._limpiar_resultados()
-        if self.tabla.currentItem() is None:
-            self.tabla.setCurrentCell(0, 0)
 
     def limpiar_tabla(self):
-        for i in range(self.tabla.rowCount()):
-            for j in range(self.tabla.columnCount()):
-                self.tabla.item(i, j).setText("0")
+        self.tabla.limpiar()
         self.lbl_modelo_info.setVisible(False)
         self.combo_modelos.setCurrentIndex(0)
-        self.tabla.setCurrentCell(0, 0)
         self._limpiar_resultados()
 
     def cargar_modelo_seleccionado(self, idx):

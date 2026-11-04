@@ -6,222 +6,253 @@ Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
 """
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QTableWidget, QTableWidgetItem, QSpinBox, QCheckBox,
-    QTextEdit, QMessageBox, QGroupBox, QHeaderView
+    QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QMessageBox, QSplitter, QApplication
 )
 from PyQt6.QtCore import Qt
 from fractions import Fraction
 from core.parser import parse_expresion, formato_numero
-from core.transformaciones_lineales import analizar_transformacion_completa, evaluar_transformacion
+from core.transformaciones_lineales import analizar_transformacion_completa
 from core.eliminacion_gaussiana import nombre_var
+from gui.componentes import BotonIcono, PestanasSegmentadas, Tarjeta
+from gui.entrada import (
+    SelectorDimension, SelectorFormato, TablaMatriz, TecladoMatematico, Resumen,
+    grupo_dimensiones, boton_principal, contenedor_fila
+)
 
 SEP = "-" * 78
+
+
+def _vector(valores, frac):
+    return "[" + ", ".join(formato_numero(x, frac) for x in valores) + "]ᵀ"
+
 
 class TransformacionesWidget(QWidget):
     def __init__(self):
         super().__init__()
+        self._analizado = False
+        self._crear_barra()
         self.init_ui()
 
+    # ── Barra superior del módulo (la coloca MainWindow) ─────────────
+
+    def _crear_barra(self):
+        # T: ℝⁿ → ℝᵐ  (n = columnas de A = dominio, m = filas de A = codominio)
+        self.spin_n = SelectorDimension(3, "Dimensión del dominio (n columnas)")
+        self.spin_m = SelectorDimension(3, "Dimensión del codominio (m filas)")
+        dims = grupo_dimensiones(["  T: ℝ", self.spin_n, "→ ℝ", self.spin_m])
+        dims.setToolTip("T: ℝⁿ → ℝᵐ,  T(x) = A · x")
+        self.barra_izq = contenedor_fila(dims)
+        self.barra_der = boton_principal("Analizar", "Analizar T (Ctrl+Enter)", self.accion_principal)
+
+    def barra_contexto(self):
+        return self.barra_izq, self.barra_der
+
+    def accion_principal(self):
+        self.analizar_transformacion()
+
+    # ── Cuerpo ──────────────────────────────────────────────────────
+
     def init_ui(self):
-        layout = QVBoxLayout(self)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
 
-        # --- 1. CONFIGURACIÓN DE DIMENSIONES ---
-        config_box = QGroupBox("1. Definición de la Transformación Lineal  T: ℝⁿ → ℝᵐ   [ T(x) = A · x ]")
-        config_layout = QHBoxLayout(config_box)
+        divisor = QSplitter(Qt.Orientation.Horizontal)
+        divisor.setHandleWidth(12)
+        divisor.setChildrenCollapsible(False)
 
-        config_layout.addWidget(QLabel("Dimensión Codominio (m filas):"))
-        self.spin_m = QSpinBox()
-        self.spin_m.setRange(1, 10)
-        self.spin_m.setValue(3)
+        izquierda = QWidget()
+        izq = QVBoxLayout(izquierda)
+        izq.setContentsMargins(0, 0, 0, 0)
+        izq.setSpacing(12)
+
+        tarjeta_A = Tarjeta("A")
+        tarjeta_A.setToolTip("Matriz estándar de T (m × n)")
+        self.btn_limpiar = BotonIcono("borrar", "Limpiar todo", 16)
+        self.btn_limpiar.clicked.connect(self.limpiar_tablas)
+        tarjeta_A.agregar_a_cabecera(self.btn_limpiar)
+        self.tabla_A = TablaMatriz(filas_visibles=6)
+        tarjeta_A.lay.addWidget(self.tabla_A)
+        izq.addWidget(tarjeta_A)
+
+        # Vectores u y b como filas para ahorrar espacio vertical
+        tarjeta_u = Tarjeta("u  →  T(u)")
+        tarjeta_u.setToolTip("Vector u ∈ ℝⁿ para calcular su imagen T(u)")
+        self.tabla_u = TablaMatriz(filas_visibles=1)
+        tarjeta_u.lay.addWidget(self.tabla_u)
+        tarjeta_b = Tarjeta("b  ∈  Im(T)?")
+        tarjeta_b.setToolTip("Vector b ∈ ℝᵐ: ¿existe x tal que T(x) = b?")
+        self.tabla_b = TablaMatriz(filas_visibles=1)
+        tarjeta_b.lay.addWidget(self.tabla_b)
+        izq.addWidget(tarjeta_u)
+        izq.addWidget(tarjeta_b)
+
+        self.teclado = TecladoMatematico()
+        self.teclado.registrar(self.tabla_A, self.tabla_u, self.tabla_b)
+        self.teclado.fin_de_entrada.connect(self.accion_principal)
+        izq.addWidget(self.teclado, 1)
+
+        divisor.addWidget(izquierda)
+        divisor.addWidget(self._crear_tarjeta_resultados())
+        divisor.setSizes([600, 600])
+        layout.addWidget(divisor)
+
         self.spin_m.valueChanged.connect(self.actualizar_tablas)
-        config_layout.addWidget(self.spin_m)
-
-        config_layout.addWidget(QLabel("Dimensión Dominio (n columnas):"))
-        self.spin_n = QSpinBox()
-        self.spin_n.setRange(1, 10)
-        self.spin_n.setValue(3)
         self.spin_n.valueChanged.connect(self.actualizar_tablas)
-        config_layout.addWidget(self.spin_n)
-
-        self.chk_fracciones = QCheckBox("Mostrar como Fracciones (ej: 1/2)")
-        self.chk_fracciones.setChecked(True)
-        config_layout.addWidget(self.chk_fracciones)
-
-        btn_limpiar = QPushButton("Limpiar Todo")
-        btn_limpiar.clicked.connect(self.limpiar_tablas)
-        config_layout.addWidget(btn_limpiar)
-
-        layout.addWidget(config_box)
-
-        # --- 2. MATRIZ ESTÁNDAR A Y VECTORES u, b ---
-        paneles_layout = QHBoxLayout()
-
-        # Matriz A
-        mat_box = QGroupBox("Matriz Estándar A (m × n)")
-        mat_layout = QVBoxLayout(mat_box)
-        self.tabla_A = QTableWidget()
-        mat_layout.addWidget(self.tabla_A)
-        paneles_layout.addWidget(mat_box, 3)
-
-        # Vector u para T(u)
-        u_box = QGroupBox("Vector u ∈ ℝⁿ  [Para calcular T(u)]")
-        u_layout = QVBoxLayout(u_box)
-        self.tabla_u = QTableWidget()
-        u_layout.addWidget(self.tabla_u)
-        paneles_layout.addWidget(u_box, 1)
-
-        # Vector b para preimagen
-        b_box = QGroupBox("Vector b ∈ ℝᵐ  [¿Pertenece al Rango?]")
-        b_layout = QVBoxLayout(b_box)
-        self.tabla_b = QTableWidget()
-        b_layout.addWidget(self.tabla_b)
-        paneles_layout.addWidget(b_box, 1)
-
-        layout.addLayout(paneles_layout)
-
-        # Botón de Análisis
-        btn_analizar = QPushButton("▶ Analizar Transformación Lineal Completa (Imagen, Rango, Inyectividad y Sobreyectividad)")
-        btn_analizar.setObjectName("PrimaryButton")
-        btn_analizar.setStyleSheet("background-color: #0284C7; color: white; font-weight: bold; padding: 10px; font-size: 14px;")
-        btn_analizar.clicked.connect(self.analizar_transformacion)
-        layout.addWidget(btn_analizar)
-
-        # --- 3. RESULTADOS DEL ANÁLISIS ---
-        res_box = QGroupBox("Resultados y Diagnóstico de la Transformación Lineal")
-        res_layout = QVBoxLayout(res_box)
-        self.txt_salida = QTextEdit()
-        self.txt_salida.setReadOnly(True)
-        res_layout.addWidget(self.txt_salida)
-        layout.addWidget(res_box)
-
-        layout.setStretch(0, 0)
-        layout.setStretch(1, 0)
-        layout.setStretch(2, 0)
-        layout.setStretch(3, 1)
-
         self.actualizar_tablas()
+
+    def _crear_tarjeta_resultados(self):
+        tarjeta = Tarjeta()
+        self.tabs = PestanasSegmentadas()
+        self.txt_propiedades = self._nueva_pestania("Propiedades")
+        self.txt_imagen = self._nueva_pestania("T(u)")
+        self.txt_rango = self._nueva_pestania("Rango")
+        tarjeta.cabecera.addWidget(self.tabs.crear_control())
+        tarjeta.cabecera.addStretch()
+
+        self.chk_fracciones = SelectorFormato()
+        self.chk_fracciones.cambiado.connect(self._repetir_analisis)
+        tarjeta.cabecera.addWidget(self.chk_fracciones)
+        self.btn_copiar = BotonIcono("copiar", "Copiar pestaña actual", 16)
+        self.btn_copiar.clicked.connect(self._copiar_resultado)
+        tarjeta.cabecera.addWidget(self.btn_copiar)
+
+        self.resumen_tipo = Resumen()
+        self.resumen_rango = Resumen()
+        tarjeta.lay.addWidget(self.resumen_tipo)
+        tarjeta.lay.addWidget(self.resumen_rango)
+        tarjeta.lay.addWidget(self.tabs, 1)
+        return tarjeta
+
+    def _nueva_pestania(self, titulo):
+        txt = QTextEdit()
+        txt.setReadOnly(True)
+        txt.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+        self.tabs.addTab(txt, titulo)
+        return txt
+
+    def aplicar_tema(self, paleta):
+        for b in (self.btn_limpiar, self.btn_copiar):
+            b.aplicar_tema(paleta)
+        self.teclado.aplicar_tema(paleta)
+
+    # ── Datos ───────────────────────────────────────────────────────
 
     def actualizar_tablas(self):
         m = self.spin_m.value()
         n = self.spin_n.value()
-
-        # Matriz A
-        self.tabla_A.setRowCount(m)
-        self.tabla_A.setColumnCount(n)
-        self.tabla_A.setHorizontalHeaderLabels([nombre_var(j) for j in range(n)])
-        self.tabla_A.setVerticalHeaderLabels([f"R{i+1}" for i in range(m)])
-        self._inicializar_celdas(self.tabla_A, m, n)
-        self.tabla_A.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-
-        # Vector u (n filas x 1 columna)
-        self.tabla_u.setRowCount(n)
-        self.tabla_u.setColumnCount(1)
-        self.tabla_u.setHorizontalHeaderLabels(["u"])
-        self.tabla_u.setVerticalHeaderLabels([nombre_var(j) for j in range(n)])
-        self._inicializar_celdas(self.tabla_u, n, 1)
-        self.tabla_u.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-
-        # Vector b (m filas x 1 columna)
-        self.tabla_b.setRowCount(m)
-        self.tabla_b.setColumnCount(1)
-        self.tabla_b.setHorizontalHeaderLabels(["b"])
-        self.tabla_b.setVerticalHeaderLabels([f"b{i+1}" for i in range(m)])
-        self._inicializar_celdas(self.tabla_b, m, 1)
-        self.tabla_b.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-
-    def _inicializar_celdas(self, tabla, filas, columnas):
-        for i in range(filas):
-            for j in range(columnas):
-                if not tabla.item(i, j):
-                    item = QTableWidgetItem("0")
-                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                    tabla.setItem(i, j, item)
+        variables = [nombre_var(j) for j in range(n)]
+        self.tabla_A.redimensionar(m, n, variables, [f"R{i + 1}" for i in range(m)])
+        self.tabla_u.redimensionar(1, n, variables, ["u"])
+        self.tabla_b.redimensionar(1, m, [f"b{nombre_var(i)[1:]}" for i in range(m)], ["b"])
+        self._limpiar_resultados()
 
     def limpiar_tablas(self):
         for t in (self.tabla_A, self.tabla_u, self.tabla_b):
-            for i in range(t.rowCount()):
-                for j in range(t.columnCount()):
-                    t.item(i, j).setText("0")
-        self.txt_salida.clear()
+            t.limpiar()
+        self._limpiar_resultados()
+
+    def _limpiar_resultados(self):
+        """Los resultados dejan de valer cuando cambian las dimensiones o los datos."""
+        self._analizado = False
+        self.resumen_tipo.setVisible(False)
+        self.resumen_rango.setVisible(False)
+        for txt in (self.txt_propiedades, self.txt_imagen, self.txt_rango):
+            txt.clear()
+
+    def _repetir_analisis(self):
+        if self._analizado:
+            self.analizar_transformacion()
+
+    def _copiar_resultado(self):
+        actual = self.tabs.currentWidget()
+        if actual is not None:
+            QApplication.clipboard().setText(actual.toPlainText())
+
+    def _leer(self, tabla, filas, columnas, nombre_celda, errores):
+        valores = []
+        for i in range(filas):
+            fila = []
+            for j in range(columnas):
+                item = tabla.item(i, j)
+                val, err = parse_expresion(item.text() if item else "0")
+                if err:
+                    errores.append(f"• {nombre_celda(i, j)}: {err}")
+                fila.append(val if val is not None else Fraction(0))
+            valores.append(fila)
+        return valores
+
+    # ── Análisis ────────────────────────────────────────────────────
 
     def analizar_transformacion(self):
+        for t in (self.tabla_A, self.tabla_u, self.tabla_b):
+            t.terminar_edicion()
         m = self.spin_m.value()
         n = self.spin_n.value()
         frac = self.chk_fracciones.isChecked()
 
-        # 1. Leer Matriz A
-        A = []
         errores = []
-        for i in range(m):
-            fila = []
-            for j in range(n):
-                item = self.tabla_A.item(i, j)
-                val, err = parse_expresion(item.text() if item else "0")
-                if err:
-                    errores.append(f"• Matriz A [Fila {i+1}, Col {nombre_var(j)}]: {err}")
-                fila.append(val if val is not None else Fraction(0))
-            A.append(fila)
-
-        # 2. Leer Vector u
-        u = []
-        for j in range(n):
-            item = self.tabla_u.item(j, 0)
-            val, err = parse_expresion(item.text() if item else "0")
-            if err:
-                errores.append(f"• Vector u [{nombre_var(j)}]: {err}")
-            u.append(val if val is not None else Fraction(0))
-
-        # 3. Leer Vector b
-        b = []
-        for i in range(m):
-            item = self.tabla_b.item(i, 0)
-            val, err = parse_expresion(item.text() if item else "0")
-            if err:
-                errores.append(f"• Vector b [b{i+1}]: {err}")
-            b.append(val if val is not None else Fraction(0))
+        A = self._leer(self.tabla_A, m, n, lambda i, j: f"Matriz A [Fila {i+1}, Col {nombre_var(j)}]", errores)
+        u = self._leer(self.tabla_u, 1, n, lambda i, j: f"Vector u [{nombre_var(j)}]", errores)[0]
+        b = self._leer(self.tabla_b, 1, m, lambda i, j: f"Vector b [b{j+1}]", errores)[0]
 
         if errores:
+            self.resumen_tipo.mostrar("error", f"Revisa {len(errores)} celda{'s' if len(errores) > 1 else ''}")
+            self.resumen_rango.setVisible(False)
             QMessageBox.critical(self, "Error en los Datos", "Se encontraron errores:\n\n" + "\n".join(errores))
             return
 
-        # 4. Ejecutar análisis completo
         analisis = analizar_transformacion_completa(A, m, n, b=b, u=u, modo_fraccion=frac)
+        self._analizado = True
 
-        lineas = [
+        # 1. Propiedades
+        self.txt_propiedades.setText("\n".join([
             "ANÁLISIS DE LA TRANSFORMACIÓN LINEAL  T(x) = A · x",
             SEP,
             f"• Dominio:  {analisis['dominio']}    (espacio de vectores de entrada x de dimensión {n})",
             f"• Codominio: {analisis['codominio']}    (espacio de vectores de salida w de dimensión {m})",
             f"• Número de Columnas Pivote (Rango de A): {analisis['num_pivotes']}",
             "",
-            "1. PROPIEDADES FUNDAMENTALES (Teoremas de Inyectividad y Sobreyectividad):",
+            "PROPIEDADES FUNDAMENTALES (Teoremas de Inyectividad y Sobreyectividad):",
             f"  {analisis['detalle_inyectiva']}",
             "",
             f"  {analisis['detalle_sobreyectiva']}",
-            "",
+        ]))
+
+        # 2. Imagen T(u)
+        lineas = [
+            "EVALUACIÓN DE LA IMAGEN  w = T(u) = A · u",
             SEP,
-            "2. EVALUACIÓN DE LA IMAGEN  w = T(u) = A · u :",
-            f"   Vector ingresado u = [" + ", ".join(formato_numero(x, frac) for x in u) + "]ᵀ",
-            f"   Resultado Imagen w = T(u) = [" + ", ".join(formato_numero(x, frac) for x in analisis['Tu']) + "]ᵀ",
+            f"   Vector ingresado u = {_vector(u, frac)}",
+            f"   Resultado Imagen w = T(u) = {_vector(analisis['Tu'], frac)}",
             "   Cálculo componente a componente:",
         ]
+        lineas.extend(f"     {p}" for p in analisis["pasos_Tu"])
+        self.txt_imagen.setText("\n".join(lineas))
 
-        for p in analisis["pasos_Tu"]:
-            lineas.append(f"     {p}")
-
-        lineas.extend([
-            "",
+        # 3. Pertenencia al rango
+        lineas = [
+            "EVALUACIÓN DE PERTENENCIA AL RANGO  (¿Existe x tal que T(x) = b?)",
             SEP,
-            "3. EVALUACIÓN DE PERTENENCIA AL RANGO  (¿Existe x tal que T(x) = b?):",
-            f"   Vector objetivo b = [" + ", ".join(formato_numero(x, frac) for x in b) + "]ᵀ",
-        ])
-
+            f"   Vector objetivo b = {_vector(b, frac)}",
+        ]
         if analisis["pertenece_rango"]:
-            lineas.append(f"   ✔ EL VECTOR b SÍ PERTENECE AL RANGO / IMAGEN DE T.")
+            lineas.append("   ✔ EL VECTOR b SÍ PERTENECE AL RANGO / IMAGEN DE T.")
             lineas.append("   El sistema [A | b] es consistente. Existe al menos un vector x en el dominio tal que T(x) = b.")
         else:
-            lineas.append(f"   ✘ EL VECTOR b NO PERTENECE AL RANGO / IMAGEN DE T.")
+            lineas.append("   ✘ EL VECTOR b NO PERTENECE AL RANGO / IMAGEN DE T.")
             lineas.append("   El sistema [A | b] es inconsistente (la columna b genera contradicción de pivote).")
+        self.txt_rango.setText("\n".join(lineas))
 
-        self.txt_salida.setText("\n".join(lineas))
+        # Resumen de una línea
+        iny, sob = analisis["es_inyectiva"], analisis["es_sobreyectiva"]
+        if iny and sob:
+            estado, titulo = "ok", "Biyectiva"
+        else:
+            estado = "aviso" if (iny or sob) else "error"
+            titulo = f"{'Inyectiva' if iny else 'No inyectiva'} · {'sobreyectiva' if sob else 'no sobreyectiva'}"
+        self.resumen_tipo.mostrar(estado, titulo, f"T(u) = {_vector(analisis['Tu'], frac)}")
+        if analisis["pertenece_rango"]:
+            self.resumen_rango.mostrar("ok", "b está en el rango", f"rango(A) = {analisis['num_pivotes']}")
+        else:
+            self.resumen_rango.mostrar("error", "b no está en el rango", f"rango(A) = {analisis['num_pivotes']}")
+        self.tabs.setCurrentWidget(self.txt_propiedades)
