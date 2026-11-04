@@ -51,6 +51,8 @@ QToolButton#IconButton, QPushButton#IconButton {
     background: transparent; padding: 6px; border-radius: 8px;
 }
 QToolButton#IconButton:hover, QPushButton#IconButton:hover { background-color: {fill}; }
+QToolButton#IconButton::menu-indicator { image: none; width: 0; }
+QToolButton#IconButton:disabled { color: {dim}; }
 
 QPushButton#PrimaryButton, QToolButton#PrimaryButton {
     background-color: {red}; color: #FFFFFF;

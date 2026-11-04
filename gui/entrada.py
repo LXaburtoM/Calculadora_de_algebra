@@ -52,9 +52,10 @@ class SelectorDimension(QComboBox):
 
     valueChanged = pyqtSignal(int)
 
-    def __init__(self, valor, descripcion):
+    def __init__(self, valor, descripcion, maximo=DIM_MAX):
         super().__init__()
-        self.addItems([str(i) for i in range(1, DIM_MAX + 1)])
+        self.maximo = maximo
+        self.addItems([str(i) for i in range(1, maximo + 1)])
         self.setCurrentIndex(valor - 1)
         self.setToolTip(descripcion)
         self.setAccessibleName(descripcion)
@@ -65,7 +66,7 @@ class SelectorDimension(QComboBox):
         return self.currentIndex() + 1
 
     def setValue(self, v):
-        self.setCurrentIndex(max(1, min(DIM_MAX, v)) - 1)
+        self.setCurrentIndex(max(1, min(self.maximo, v)) - 1)
 
 
 def grupo_dimensiones(partes):
@@ -288,9 +289,10 @@ class TecladoMatematico(Tarjeta):
                 otra.clearSelection()
 
     def _siguiente_tabla(self, tabla):
-        i = self.tablas.index(tabla)
-        if i + 1 < len(self.tablas):
-            siguiente = self.tablas[i + 1]
+        # Las tablas ocultas (p. ej. B cuando la operación no la usa) se saltan
+        pendientes = [t for t in self.tablas[self.tablas.index(tabla) + 1:] if t.isVisible()]
+        if pendientes:
+            siguiente = pendientes[0]
             siguiente.setFocus()
             siguiente.setCurrentCell(0, 0)
             self._activar(siguiente)
@@ -370,6 +372,10 @@ class Resumen(QFrame):
         self.punto.style().polish(self.punto)
         self.titulo.setText(titulo)
         self.valor.setText(valor)
+        # El ancho se recalcula con la fuente ya aplicada por el estilo
+        for lbl in (self.titulo, self.valor):
+            lbl.ensurePolished()
+            lbl.setMinimumWidth(lbl.sizeHint().width())
         self.setVisible(True)
 
 
