@@ -7,7 +7,7 @@ Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
 
 from PyQt6.QtWidgets import (
     QFrame, QHBoxLayout, QVBoxLayout, QPushButton, QToolButton, QButtonGroup,
-    QStackedWidget, QWidget, QLabel
+    QStackedWidget, QWidget, QLabel, QSizePolicy
 )
 from PyQt6.QtGui import QIcon, QPixmap, QPainter, QPen, QColor, QPainterPath
 from PyQt6.QtCore import Qt, QSize, QRectF, QPointF, pyqtSignal
@@ -95,6 +95,8 @@ class ControlSegmentado(QFrame):
     def __init__(self, opciones, parent=None):
         super().__init__(parent)
         self.setObjectName("Segmented")
+        # Altura propia: no se estira al alto de la barra que lo contiene
+        self.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
         lay = QHBoxLayout(self)
         lay.setContentsMargins(2, 2, 2, 2)
         lay.setSpacing(2)

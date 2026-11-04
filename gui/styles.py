@@ -13,7 +13,7 @@ TEMAS = {
         "bg": "#111214", "surface": "#1A1B1E", "fill": "#26272B", "fill_h": "#303136",
         "input": "#151619", "num": "#2B2C31", "sep": "#2A2B30", "thumb": "#3A3B40",
         "text": "#ECECEE", "muted": "#9A9CA4", "dim": "#6C6F77",
-        "red": "#E0393E", "red_h": "#EA4F54", "red_soft": "rgba(224, 57, 62, 40)",
+        "red": "#E0393E", "red_h": "#EA4F54", "red_soft": "rgba(224, 57, 62, 30)",
         "ok": "#4CC38A", "warn": "#E3A33B", "scrim": "rgba(0, 0, 0, 140)",
     },
     "claro": {
@@ -35,6 +35,15 @@ QToolTip {
     border: 1px solid {sep}; border-radius: 6px; padding: 4px 8px;
 }
 
+/* ── Riel de módulos ─────────────────────────────────────────── */
+QFrame#Rail { background-color: {surface}; border-right: 1px solid {sep}; }
+QToolButton#RailItem {
+    background: transparent; color: {muted}; border-radius: 10px; padding: 0;
+    font-size: 11px; font-weight: 700;
+}
+QToolButton#RailItem:hover { background-color: {fill}; color: {text}; }
+QToolButton#RailItem:checked { background-color: {red}; color: #FFFFFF; }
+
 /* ── Barra superior ─────────────────────────────────────────── */
 QFrame#TopBar { background-color: {surface}; border-bottom: 1px solid {sep}; }
 QLabel#ModuleTitle { font-size: 15px; font-weight: 600; }
@@ -51,7 +60,6 @@ QToolButton#IconButton, QPushButton#IconButton {
     background: transparent; padding: 6px; border-radius: 8px;
 }
 QToolButton#IconButton:hover, QPushButton#IconButton:hover { background-color: {fill}; }
-QToolButton#IconButton::menu-indicator { image: none; width: 0; }
 QToolButton#IconButton:disabled { color: {dim}; }
 
 QPushButton#PrimaryButton, QToolButton#PrimaryButton {
@@ -64,18 +72,12 @@ QToolButton#PrimaryButton::menu-button {
     width: 26px; border-top-right-radius: 8px; border-bottom-right-radius: 8px;
 }
 
-/* Botón dividido: acción principal + menú de métodos */
-QPushButton#SplitMain {
-    background-color: {red}; color: #FFFFFF;
-    border-top-right-radius: 0; border-bottom-right-radius: 0;
+/* Acciones sobre el último resultado */
+QToolButton#ActionChip {
+    background-color: {fill}; color: {text}; border-radius: 7px;
+    padding: 4px 10px; font-size: 12px; font-weight: 500;
 }
-QToolButton#SplitMenu {
-    background-color: {red}; padding: 7px 7px;
-    border-top-left-radius: 0; border-bottom-left-radius: 0;
-    border-left: 1px solid rgba(0, 0, 0, 45);
-}
-QPushButton#SplitMain:hover, QToolButton#SplitMenu:hover { background-color: {red_h}; }
-QToolButton#SplitMenu::menu-indicator { image: none; width: 0; }
+QToolButton#ActionChip:hover { background-color: {fill_h}; }
 
 /* Control segmentado */
 QFrame#Segmented { background-color: {fill}; border-radius: 9px; }
@@ -184,6 +186,9 @@ QHeaderView::section {
     background-color: {surface}; color: {dim}; font-weight: 500;
     border: none; border-bottom: 1px solid {sep}; border-right: 1px solid {sep}; padding: 6px;
 }
+/* El marco de la tabla ya cierra los bordes exteriores: sin líneas dobles */
+QHeaderView::section:horizontal:last, QHeaderView::section:horizontal:only-one { border-right: none; }
+QHeaderView::section:vertical:last, QHeaderView::section:vertical:only-one { border-bottom: none; }
 QTableCornerButton::section { background-color: {surface}; border: none; }
 QTableWidget QHeaderView { background-color: {surface}; }
 
