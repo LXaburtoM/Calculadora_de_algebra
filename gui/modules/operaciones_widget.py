@@ -132,7 +132,10 @@ class OperacionesWidget(QWidget):
         cl.setContentsMargins(0, 0, 0, 0)
         cl.setSpacing(12)
         for w, estira in izquierda:
-            cl.addWidget(w, estira)
+            if w is None:
+                cl.addStretch(estira)
+            else:
+                cl.addWidget(w, estira)
         divisor.addWidget(col)
         divisor.addWidget(resultados)
         divisor.setSizes([600, 600])
@@ -231,7 +234,7 @@ class OperacionesWidget(QWidget):
         self._actualizar_tablas_vec()
         return self._pagina(
             [self.combo_vec_op, dims],
-            [(self._fila(self.tarjeta_c_vec, self.tarjeta_v1), 0), (self.tarjeta_v2, 0), (self.teclado_vec, 1)],
+            [(self._fila(self.tarjeta_c_vec, self.tarjeta_v1), 0), (self.tarjeta_v2, 0), (None, 1), (self.teclado_vec, 0)],
             self.res_vec)
 
     def _boton_texto(self, texto, tooltip, accion):
@@ -340,8 +343,8 @@ class OperacionesWidget(QWidget):
         self.combo_ejemplos = _combo(EJEMPLOS_MATRICES, "Ejemplos de clase (Sesión 9): se cargan y resuelven")
         self.combo_ejemplos.view().setMinimumWidth(340)
 
-        self.tabla_A = TablaMatriz(filas_visibles=5)
-        self.tabla_B = TablaMatriz(filas_visibles=5)
+        self.tabla_A = TablaMatriz(filas_visibles=5, expandir=True)
+        self.tabla_B = TablaMatriz(filas_visibles=5, expandir=True)
         self.tabla_c_mat = self._escalar()
         self.tarjeta_A = self._tarjeta_tabla("A", self.tabla_A)
         self.tarjeta_B = self._tarjeta_tabla("B", self.tabla_B)
@@ -384,7 +387,7 @@ class OperacionesWidget(QWidget):
         self._actualizar_tablas_mat()
         return self._pagina(
             [self.combo_mat_op, dims_A, self.dims_B, self.combo_ejemplos],
-            [(fila_AB, 0), (self.teclado_mat, 1)],
+            [(fila_AB, 1), (None, 0), (self.teclado_mat, 1)],
             self.res_mat)
 
     def _limpiar_historial(self):
@@ -587,7 +590,7 @@ class OperacionesWidget(QWidget):
         dims = grupo_dimensiones(["  ℝ", self.spin_cl_n, "   k =", self.spin_cl_k])
         dims.setToolTip("Dimensión ℝⁿ y número de vectores k")
 
-        self.tabla_cl = TablaMatriz(filas_visibles=6)
+        self.tabla_cl = TablaMatriz(filas_visibles=6, expandir=True)
         tarjeta = self._tarjeta_tabla("[v₁ | … | vₖ | b]", self.tabla_cl,
                                       "Cada columna es un vector; la última columna es b")
         self.teclado_cl = TecladoMatematico()
@@ -602,7 +605,7 @@ class OperacionesWidget(QWidget):
         self.spin_cl_n.valueChanged.connect(self._actualizar_tabla_cl)
         self.spin_cl_k.valueChanged.connect(self._actualizar_tabla_cl)
         self._actualizar_tabla_cl()
-        return self._pagina([dims], [(tarjeta, 0), (self.teclado_cl, 1)], self.res_cl)
+        return self._pagina([dims], [(tarjeta, 1), (None, 0), (self.teclado_cl, 1)], self.res_cl)
 
     def _actualizar_tabla_cl(self):
         n = self.spin_cl_n.value()   # dimensión
@@ -718,7 +721,7 @@ class OperacionesWidget(QWidget):
         dims = grupo_dimensiones(["  ℝ", self.spin_il_n, "   k =", self.spin_il_k])
         dims.setToolTip("Dimensión ℝⁿ y número de vectores k")
 
-        self.tabla_il = TablaMatriz(filas_visibles=6)
+        self.tabla_il = TablaMatriz(filas_visibles=6, expandir=True)
         tarjeta = self._tarjeta_tabla("[v₁ | v₂ | … | vₖ]", self.tabla_il, "Cada columna es un vector")
         self.teclado_il = TecladoMatematico()
         self.teclado_il.registrar(self.tabla_il)
@@ -730,7 +733,7 @@ class OperacionesWidget(QWidget):
         self.spin_il_n.valueChanged.connect(self._actualizar_tabla_il)
         self.spin_il_k.valueChanged.connect(self._actualizar_tabla_il)
         self._actualizar_tabla_il()
-        return self._pagina([dims], [(tarjeta, 0), (self.teclado_il, 1)], self.res_il)
+        return self._pagina([dims], [(tarjeta, 1), (None, 0), (self.teclado_il, 1)], self.res_il)
 
     def _actualizar_tabla_il(self):
         n = self.spin_il_n.value()

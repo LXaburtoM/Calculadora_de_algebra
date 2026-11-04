@@ -10,7 +10,7 @@ import tempfile
 
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
-    QLabel, QStackedWidget, QFrame, QApplication, QTextBrowser
+    QLabel, QStackedWidget, QFrame, QApplication, QTextBrowser, QSizePolicy
 )
 from PyQt6.QtCore import Qt, QPropertyAnimation, QEasingCurve, QPoint, QSettings
 from PyQt6.QtGui import QKeySequence, QShortcut, QFontDatabase
@@ -284,6 +284,10 @@ class MainWindow(QMainWindow):
     # ── Navegación ────────────────────────────────────────────────────
 
     def activar_modulo(self, idx):
+        # Solo el módulo visible define el tamaño mínimo de la ventana
+        for i, w in enumerate(self.modulos):
+            politica = QSizePolicy.Policy.Preferred if i == idx else QSizePolicy.Policy.Ignored
+            w.setSizePolicy(politica, politica)
         self.stack.setCurrentIndex(idx)
         self.lbl_titulo.setText(MODULOS[idx][1])
         for i, item in enumerate(self.items_menu):

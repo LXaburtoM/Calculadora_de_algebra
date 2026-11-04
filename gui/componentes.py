@@ -165,6 +165,25 @@ class Tarjeta(QFrame):
             self.cabecera.addWidget(lbl)
         self.lay.addLayout(self.cabecera)
 
+    def ajustar_a_contenido(self):
+        """Limita la altura de la tarjeta a lo que su contenido puede usar.
+
+        Así el espacio que sobra en la ventana no queda como un hueco dentro de la tarjeta.
+        """
+        m = self.lay.contentsMargins()
+        alto = m.top() + m.bottom()
+        visibles = 0
+        for i in range(self.lay.count()):
+            item = self.lay.itemAt(i)
+            w = item.widget()
+            if w is not None and w.isHidden():
+                continue
+            maximo = item.maximumSize().height()
+            alto += maximo if maximo < 10000 else item.sizeHint().height()
+            visibles += 1
+        alto += self.lay.spacing() * max(0, visibles - 1)
+        self.setMaximumHeight(alto)
+
     def agregar_a_cabecera(self, widget, al_final=True):
         if al_final:
             if not getattr(self, "_estirado", False):

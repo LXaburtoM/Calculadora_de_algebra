@@ -120,10 +120,11 @@ class EcuacionesWidget(QWidget):
         izq = QVBoxLayout(izquierda)
         izq.setContentsMargins(0, 0, 0, 0)
         izq.setSpacing(12)
-        izq.addWidget(self._crear_tarjeta_matriz())
+        izq.addWidget(self._crear_tarjeta_matriz(), 1)
         self.teclado = TecladoMatematico()
         self.teclado.registrar(self.tabla)
         self.teclado.fin_de_entrada.connect(self.accion_principal)
+        izq.addStretch(0)
         izq.addWidget(self.teclado, 1)
 
         divisor.addWidget(izquierda)
@@ -143,7 +144,7 @@ class EcuacionesWidget(QWidget):
         self.btn_limpiar.clicked.connect(self.limpiar_tabla)
         tarjeta.agregar_a_cabecera(self.btn_limpiar)
 
-        self.tabla = TablaMatriz()
+        self.tabla = TablaMatriz(expandir=True)
         tarjeta.lay.addWidget(self.tabla)
 
         # Enunciado del modelo aplicado (visible al elegir un ejemplo)
@@ -225,13 +226,17 @@ class EcuacionesWidget(QWidget):
 
     def limpiar_tabla(self):
         self.tabla.limpiar()
-        self.lbl_modelo_info.setVisible(False)
+        self._mostrar_info(False)
         self.combo_modelos.setCurrentIndex(0)
         self._limpiar_resultados()
 
+    def _mostrar_info(self, visible):
+        self.lbl_modelo_info.setVisible(visible)
+        self.tabla.parentWidget().ajustar_a_contenido()
+
     def cargar_modelo_seleccionado(self, idx):
         if idx <= 0:
-            self.lbl_modelo_info.setVisible(False)
+            self._mostrar_info(False)
             return
 
         modelo = MODELOS[idx - 1]
@@ -250,7 +255,7 @@ class EcuacionesWidget(QWidget):
             f"<b>Ecuaciones del modelo:</b><br>• " + "<br>• ".join(modelo["ecuaciones"])
         ).replace("\n", "<br>")
         self.lbl_modelo_info.setHtml(info_text)
-        self.lbl_modelo_info.setVisible(True)
+        self._mostrar_info(True)
         self._limpiar_resultados()
 
     def leer_matriz(self):

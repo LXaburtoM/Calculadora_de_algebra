@@ -70,11 +70,11 @@ class TransformacionesWidget(QWidget):
         self.btn_limpiar = BotonIcono("borrar", "Limpiar todo", 16)
         self.btn_limpiar.clicked.connect(self.limpiar_tablas)
         tarjeta_A.agregar_a_cabecera(self.btn_limpiar)
-        self.tabla_A = TablaMatriz(filas_visibles=6)
+        self.tabla_A = TablaMatriz(filas_visibles=6, expandir=True)
         tarjeta_A.lay.addWidget(self.tabla_A)
-        izq.addWidget(tarjeta_A)
+        izq.addWidget(tarjeta_A, 1)
 
-        # Vectores u y b como filas para ahorrar espacio vertical
+        # Vectores u y b como filas, lado a lado, para dejar el espacio vertical a A
         tarjeta_u = Tarjeta("u  →  T(u)")
         tarjeta_u.setToolTip("Vector u ∈ ℝⁿ para calcular su imagen T(u)")
         self.tabla_u = TablaMatriz(filas_visibles=1)
@@ -83,12 +83,16 @@ class TransformacionesWidget(QWidget):
         tarjeta_b.setToolTip("Vector b ∈ ℝᵐ: ¿existe x tal que T(x) = b?")
         self.tabla_b = TablaMatriz(filas_visibles=1)
         tarjeta_b.lay.addWidget(self.tabla_b)
-        izq.addWidget(tarjeta_u)
-        izq.addWidget(tarjeta_b)
+        fila_vectores = QHBoxLayout()
+        fila_vectores.setSpacing(12)
+        fila_vectores.addWidget(tarjeta_u)
+        fila_vectores.addWidget(tarjeta_b)
+        izq.addLayout(fila_vectores)
 
         self.teclado = TecladoMatematico()
         self.teclado.registrar(self.tabla_A, self.tabla_u, self.tabla_b)
         self.teclado.fin_de_entrada.connect(self.accion_principal)
+        izq.addStretch(0)
         izq.addWidget(self.teclado, 1)
 
         divisor.addWidget(izquierda)

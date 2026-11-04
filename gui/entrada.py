@@ -15,6 +15,7 @@ from gui.componentes import ControlSegmentado, Tarjeta, icono
 
 DIM_MAX = 10
 ALTO_FILA = 44
+ALTO_FILA_MAX = 64
 
 # Teclas de funciones: (etiqueta, texto que se inserta). Usan la sintaxis de core/parser.py
 TECLAS_FUNCIONES = {
@@ -99,18 +100,24 @@ class SelectorFormato(ControlSegmentado):
 
 
 class TablaMatriz(QTableWidget):
-    """Tabla de valores: Enter confirma la celda y avanza a la siguiente."""
+    """Tabla de valores: Enter confirma la celda y avanza a la siguiente.
+
+    Con `expandir=True` la tabla toma el espacio vertical libre: las filas crecen
+    hasta ALTO_FILA_MAX y, si no caben, aparece la barra de desplazamiento.
+    """
 
     fin_de_tabla = pyqtSignal()
     enfocada = pyqtSignal()
 
-    def __init__(self, filas_visibles=8, parent=None):
+    def __init__(self, filas_visibles=8, expandir=False, parent=None):
         super().__init__(parent)
         self.filas_visibles = filas_visibles
+        self.expandir = expandir
         self.verticalHeader().setDefaultSectionSize(ALTO_FILA)
         self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding,
+                           QSizePolicy.Policy.Expanding if expandir else QSizePolicy.Policy.Fixed)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
     def redimensionar(self, filas, columnas, encabezados, etiquetas_filas):
@@ -139,11 +146,34 @@ class TablaMatriz(QTableWidget):
         cabecera = 0
         if not self.horizontalHeader().isHidden():
             cabecera = max(self.horizontalHeader().height(), self.horizontalHeader().sizeHint().height())
+        base = cabecera + 2 * self.frameWidth() + 4
         filas = min(self.rowCount(), self.filas_visibles)
+        if self.expandir:
+            self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+            self.setMinimumHeight(base + ALTO_FILA * filas)
+            self.setMaximumHeight(base + ALTO_FILA_MAX * self.rowCount())
+            self._repartir_filas()
+            self._ajustar_tarjeta()
+            return
         caben = self.rowCount() <= self.filas_visibles
         self.setVerticalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff if caben else Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.setFixedHeight(cabecera + ALTO_FILA * filas + 2 * self.frameWidth() + 4)
+        self.setFixedHeight(base + ALTO_FILA * filas)
+
+    def _ajustar_tarjeta(self):
+        padre = self.parentWidget()
+        if hasattr(padre, "ajustar_a_contenido"):
+            padre.ajustar_a_contenido()
+
+    def _repartir_filas(self):
+        if self.rowCount():
+            alto = self.viewport().height() // self.rowCount()
+            self.verticalHeader().setDefaultSectionSize(max(ALTO_FILA, min(ALTO_FILA_MAX, alto)))
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self.expandir:
+            self._repartir_filas()
 
     def showEvent(self, event):
         super().showEvent(event)
@@ -213,7 +243,9 @@ class TecladoMatematico(Tarjeta):
         super().__init__(parent=parent)
         self.tablas = []
         self.activa = None
-        self.setMinimumHeight(230)
+        # Tamaño acotado: el espacio extra de la ventana es para la matriz, no para las teclas
+        self.setMinimumHeight(200)
+        self.setMaximumHeight(300)
 
         self.selector = ControlSegmentado(list(TECLAS_FUNCIONES))
         self.selector.cambiado.connect(self._cambiar_juego)
@@ -261,7 +293,7 @@ class TecladoMatematico(Tarjeta):
         b.setProperty("tipo", tipo)
         b.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         b.setCursor(Qt.CursorShape.PointingHandCursor)
-        b.setMinimumHeight(36)
+        b.setMinimumHeight(32)
         b.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         return b
 
@@ -283,6 +315,9 @@ class TecladoMatematico(Tarjeta):
             t.fin_de_tabla.connect(lambda tabla=t: self._siguiente_tabla(tabla))
         if self.activa is None and self.tablas:
             self.activa = self.tablas[0]
+        # Al inicio solo la primera tabla muestra la celda resaltada
+        for t in self.tablas[1:]:
+            t.clearSelection()
 
     def _activar(self, tabla):
         self.activa = tabla
