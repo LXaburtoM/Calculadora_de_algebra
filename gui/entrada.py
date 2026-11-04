@@ -13,6 +13,9 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtGui import QPen, QColor
 from PyQt6.QtCore import Qt, QSize, pyqtSignal
+from fractions import Fraction
+from PyQt6.QtWidgets import QMessageBox
+from core.parser import parse_expresion
 from gui.componentes import BotonIcono, ControlSegmentado, Tarjeta, icono
 
 DIM_MAX = 10
@@ -65,6 +68,16 @@ class SelectorDimension(QComboBox):
         self.setAccessibleName(descripcion)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.currentIndexChanged.connect(lambda i: self.valueChanged.emit(i + minimo))
+
+    def set_maximo(self, maximo):
+        """Cambia el valor máximo conservando la selección si sigue siendo válida."""
+        actual = min(self.value(), maximo)
+        self.blockSignals(True)
+        self.clear()
+        self.maximo = maximo
+        self.addItems([str(i) for i in range(self.minimo, maximo + 1)])
+        self.setCurrentIndex(actual - self.minimo)
+        self.blockSignals(False)
 
     def value(self):
         return self.currentIndex() + self.minimo
@@ -208,9 +221,15 @@ class TablaMatriz(QTableWidget):
             padre.ajustar_a_contenido()
 
     def _repartir_filas(self):
-        if self.rowCount():
-            alto = self.viewport().height() // self.rowCount()
-            self.verticalHeader().setDefaultSectionSize(max(ALTO_FILA, min(ALTO_FILA_MAX, alto)))
+        if not self.rowCount():
+            return
+        disponible = self.viewport().height()
+        alto = disponible // self.rowCount()
+        if alto < ALTO_FILA:
+            # No caben todas: se reparte el alto entre las filas que sí caben completas
+            visibles = max(1, disponible // ALTO_FILA)
+            alto = disponible // visibles
+        self.verticalHeader().setDefaultSectionSize(max(ALTO_FILA, min(ALTO_FILA_MAX, alto)))
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -559,3 +578,34 @@ def pagina_seccion(controles, columna, resultados):
     divisor.setSizes([600, 600])
     lay.addWidget(divisor, 1)
     return pagina
+
+
+# ── Lectura de tablas y errores ─────────────────────────────────────
+
+def leer_matriz_segura(tabla, filas, columnas, etiqueta="A"):
+    """Lee una matriz de una tabla validando cada celda.
+    Retorna (matriz, lista_de_errores).
+    """
+    matriz = []
+    errores = []
+    for i in range(filas):
+        fila = []
+        for j in range(columnas):
+            item = tabla.item(i, j)
+            texto = item.text() if item else "0"
+            val, err = parse_expresion(texto)
+            if err:
+                errores.append(f"{etiqueta}[{i+1},{j+1}]: {err}")
+            fila.append(val if val is not None else Fraction(0))
+        matriz.append(fila)
+    return matriz, errores
+
+
+def mostrar_error(parent, errores):
+    """Muestra un QMessageBox con la lista de errores si hay alguno.
+    Retorna True si hubo errores (para cortar el flujo).
+    """
+    if errores:
+        QMessageBox.critical(parent, "Error en los datos", "\n".join(errores))
+        return True
+    return False

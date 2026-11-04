@@ -199,24 +199,6 @@ QTextEdit, QPlainTextEdit {
     selection-background-color: {red_soft}; selection-color: {text};
 }
 
-/* ── Módulos que aún usan la estructura anterior ────────────── */
-QLabel#SectionHeader { font-size: 18px; font-weight: 700; margin-top: 10px; margin-bottom: 5px; }
-QGroupBox {
-    background-color: {surface}; border: none; border-radius: 12px;
-    margin-top: 22px; padding: 12px 10px 8px 10px;
-}
-QGroupBox::title {
-    subcontrol-origin: margin; subcontrol-position: top left;
-    left: 6px; padding: 0 4px; color: {muted}; font-weight: 600;
-}
-QTabWidget::pane { border: none; background: {surface}; border-radius: 10px; top: -1px; }
-QTabBar::tab {
-    background: transparent; color: {muted}; padding: 8px 14px; margin-right: 2px;
-    border: none; border-bottom: 2px solid transparent;
-}
-QTabBar::tab:selected { color: {text}; border-bottom: 2px solid {red}; font-weight: 600; }
-QTabBar::tab:hover:!selected { color: {text}; }
-
 QSplitter::handle { background: transparent; }
 QScrollBar:vertical, QScrollBar:horizontal { background: transparent; border: none; width: 10px; height: 10px; }
 QScrollBar::handle { background: {fill_h}; border-radius: 4px; min-height: 24px; min-width: 24px; }
