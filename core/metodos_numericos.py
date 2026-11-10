@@ -8,11 +8,13 @@ Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
 
 from __future__ import annotations
 
+import ast
 import math
 import warnings
 from typing import Callable, Any
 import numpy as np
 import sympy as sp
+from sympy.calculus.util import continuous_domain
 
 # Diccionario seguro de funciones y constantes permitidas para evaluación de funciones
 FUNCIONES_PERMITIDAS = {
@@ -47,11 +49,56 @@ def sanitizar_expresion(texto: str) -> str:
     return t
 
 
+# Nodos del árbol sintáctico (AST) que se permiten en una expresión matemática.
+# Cualquier otro nodo (atributos como obj.attr, subíndices, cadenas, lambdas,
+# comprensiones, argumentos con nombre, etc.) se rechaza ANTES de que SymPy
+# procese el texto, porque sympify() internamente usa eval().
+_NODOS_PERMITIDOS = (
+    ast.Expression, ast.BinOp, ast.UnaryOp, ast.Call, ast.Name, ast.Load, ast.Constant,
+    ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow, ast.USub, ast.UAdd,
+)
+
+
+def validar_expresion_segura(texto: str) -> str | None:
+    """
+    Evaluador con lista blanca basado en AST: analiza la expresión sin ejecutarla
+    y verifica que solo contenga números, la variable x, operadores aritméticos
+    (+, -, *, /, **) y funciones/constantes de FUNCIONES_PERMITIDAS.
+
+    Retorna None si la expresión es segura, o un mensaje de error en caso contrario.
+    """
+    try:
+        arbol = ast.parse(texto, mode="eval")
+    except SyntaxError:
+        return f"Error de sintaxis en la expresión '{texto}'. Revise paréntesis y operadores (use ** para potencias)."
+
+    for nodo in ast.walk(arbol):
+        if not isinstance(nodo, _NODOS_PERMITIDOS):
+            return (
+                f"La expresión '{texto}' contiene elementos no permitidos. "
+                "Use solo números, x, + - * / ** y funciones matemáticas autorizadas."
+            )
+        if isinstance(nodo, ast.Constant) and not isinstance(nodo.value, (int, float)):
+            return f"Valor no numérico no permitido en la expresión: {nodo.value!r}."
+        if isinstance(nodo, ast.Name) and nodo.id not in FUNCIONES_PERMITIDAS:
+            return f"Variable o función no autorizada: '{nodo.id}'. Use 'x' como variable independiente."
+        if isinstance(nodo, ast.Call):
+            # Solo llamadas directas a funciones autorizadas: sin(x), sqrt(x), ...
+            if not isinstance(nodo.func, ast.Name) or nodo.keywords:
+                return f"Llamada a función no permitida en la expresión '{texto}'."
+            if not callable(FUNCIONES_PERMITIDAS.get(nodo.func.id)) or isinstance(
+                FUNCIONES_PERMITIDAS.get(nodo.func.id), sp.Symbol
+            ):
+                return f"'{nodo.func.id}' no es una función autorizada."
+    return None
+
+
 def compilar_funcion(texto: str) -> tuple[sp.Expr | None, Callable[[float], float] | None, str | None]:
     """
     Compila de manera segura una expresión matemática f(x) ingresada como texto.
-    Utiliza SymPy con una lista blanca estricta de funciones y símbolos permitidos
-    para evitar el uso peligroso de eval().
+    Primero valida el texto con una lista blanca basada en AST (sin ejecutarlo) y
+    solo después lo convierte con SymPy usando el diccionario controlado
+    FUNCIONES_PERMITIDAS. Así nunca se ejecuta código arbitrario del usuario.
 
     Retorna: (expr_sympy, funcion_nativa, mensaje_error)
     """
@@ -59,10 +106,17 @@ def compilar_funcion(texto: str) -> tuple[sp.Expr | None, Callable[[float], floa
     if not limpio:
         return None, None, "La expresión de la función no puede estar vacía."
 
+    error_seguridad = validar_expresion_segura(limpio)
+    if error_seguridad:
+        return None, None, error_seguridad
+
     try:
         expr = sp.sympify(limpio, locals=FUNCIONES_PERMITIDAS)
     except Exception as e:
         return None, None, f"Error de sintaxis en la expresión '{texto}': {e}"
+
+    if not isinstance(expr, sp.Basic):
+        return None, None, f"La expresión '{texto}' no es una función matemática válida."
 
     # Validar que los símbolos presentes sean únicamente 'x' (o constantes permitidas)
     simbolos = expr.free_symbols
@@ -86,6 +140,42 @@ def compilar_funcion(texto: str) -> tuple[sp.Expr | None, Callable[[float], floa
             return float('nan')
 
     return expr, f_eval, None
+
+
+def detectar_discontinuidades(expr: sp.Expr, a: float, b: float) -> tuple[bool | None, list[float]]:
+    """
+    Analiza simbólicamente (con SymPy) si f(x) es continua en [a, b].
+
+    Retorna (es_continua, puntos):
+    - es_continua: True / False, o None si SymPy no pudo determinarlo.
+    - puntos: abscisas de las singularidades (asíntotas, divisiones entre cero)
+      encontradas dentro de [a, b], ordenadas. Puede estar vacía aunque la
+      función no sea continua (p. ej. saltos que SymPy no localiza).
+    """
+    x = sp.Symbol('x')
+    intervalo = sp.Interval(a, b)
+    es_continua: bool | None = None
+    puntos: list[float] = []
+
+    try:
+        dominio = continuous_domain(expr, x, intervalo)
+        es_continua = bool(intervalo.is_subset(dominio))
+    except Exception:
+        es_continua = None
+
+    try:
+        sing = sp.calculus.singularities(expr, x, intervalo)
+        if isinstance(sing, sp.FiniteSet):
+            for s in sing:
+                valor = complex(sp.N(s))
+                if abs(valor.imag) < 1e-12 and a <= valor.real <= b:
+                    puntos.append(valor.real)
+            if puntos and es_continua is None:
+                es_continua = False
+    except Exception:
+        pass
+
+    return es_continua, sorted(puntos)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -137,7 +227,9 @@ def metodo_biseccion(
         "b_inicial": b,
         "tol": tol,
         "max_iter": max_iter,
-        "expr_str": expr_str
+        "expr_str": expr_str,
+        "discontinuidad": False,
+        "singularidades": []
     }
 
     # 1. Validación de entradas básicas
@@ -197,20 +289,31 @@ def metodo_biseccion(
         return resultado
 
     # 6. Verificación de continuidad en el intervalo
-    # Muestreo de 120 puntos para detectar asíntotas o discontinuidades tipo 1/x
-    puntos_test = np.linspace(a, b, 120)
-    hay_discontinuidad = False
-    for pt in puntos_test:
-        val = f(float(pt))
-        if math.isnan(val) or math.isinf(val) or abs(val) > 1e12:
-            hay_discontinuidad = True
-            break
+    # El cambio de signo NO garantiza continuidad (ej. 1/x en [-1, 1] o tan(x) en [1, 2]).
+    # Primero se analiza simbólicamente el dominio de continuidad con SymPy; si no se
+    # puede determinar, se recurre a un muestreo numérico como respaldo.
+    es_continua, singularidades = detectar_discontinuidades(expr, a, b)
+    if es_continua is None:
+        es_continua = True
+        for pt in np.linspace(a, b, 401):
+            val = f(float(pt))
+            if math.isnan(val) or math.isinf(val):
+                es_continua = False
+                break
+    hay_discontinuidad = not es_continua
+    resultado["discontinuidad"] = hay_discontinuidad
+    resultado["singularidades"] = singularidades
 
     if hay_discontinuidad:
+        donde = (
+            " en x ≈ " + ", ".join(f"{s:.6g}" for s in singularidades)
+            if singularidades else ""
+        )
         resultado["advertencias"].append(
-            "¡ADVERTENCIA DE DISCONTINUIDAD! Se detectó una aparente indeterminación o asíntota en el intervalo. "
+            f"¡NO SE CUMPLEN LAS CONDICIONES DEL MÉTODO! La función no es continua en [{a}, {b}]: "
+            f"se detectó una discontinuidad o asíntota{donde}. "
             "Aunque los signos en los extremos sean opuestos, el Teorema de Bolzano exige que la función sea CONTINUA "
-            "en [a, b]. El método de bisección puede converger a la asíntota en lugar de a una raíz real."
+            "en [a, b]. El cambio de signo puede deberse a la asíntota y no a una raíz; elija un intervalo donde f sea continua."
         )
 
     # 7. Cálculo del número teórico mínimo de iteraciones
@@ -309,7 +412,41 @@ def metodo_biseccion(
         xr_prev = xr
 
     # 9. Conclusión del estado
-    if raiz_exacta:
+    # Comprobación posterior: cerca de una raíz real |f(xr)| se hace pequeño; cerca de
+    # una asíntota crece. Si |f(xr)| supera a |f(a)| y |f(b)| iniciales, el punto
+    # al que convergió el método no es una raíz.
+    f_final = resultado["f_raiz"]
+    # (Solo se juzga por magnitud si el intervalo ya se cerró hasta la tolerancia;
+    # con pocas iteraciones una función continua aún puede tener |f(xr)| grande.)
+    converge_a_asintota = (
+        f_final is None
+        or math.isnan(f_final)
+        or math.isinf(f_final)
+        or (tolerancia_alcanzada and abs(f_final) > max(abs(fa), abs(fb)))
+    )
+    if converge_a_asintota and not hay_discontinuidad and resultado["tabla"]:
+        hay_discontinuidad = True
+        resultado["discontinuidad"] = True
+        resultado["advertencias"].append(
+            "¡NO SE CUMPLEN LAS CONDICIONES DEL MÉTODO! |f(xr)| crece al reducir el intervalo, "
+            "lo que indica una asíntota o discontinuidad en lugar de una raíz."
+        )
+
+    if hay_discontinuidad:
+        resultado["exito"] = False
+        if converge_a_asintota:
+            resultado["mensaje"] = (
+                f"No se cumplen las condiciones del método (f no es continua en [{a}, {b}]). "
+                f"El intervalo se cerró en x ≈ {resultado['raiz']:.8f}, donde |f(x)| crece sin límite: "
+                "es una asíntota/discontinuidad, NO una raíz."
+            )
+        else:
+            resultado["mensaje"] = (
+                f"El método se detuvo en x ≈ {resultado['raiz']:.8f} con f(xr) = {f_final:.3e}, pero NO se cumplen "
+                f"las condiciones del método (f no es continua en [{a}, {b}]), por lo que el resultado no está "
+                "garantizado por el Teorema de Bolzano. Elija un intervalo donde f sea continua."
+            )
+    elif raiz_exacta:
         resultado["exito"] = True
         resultado["mensaje"] = (
             f"Se encontró una raíz exacta (f(xr) ≈ 0) en la iteración {resultado['iteraciones_realizadas']}: "
@@ -377,17 +514,28 @@ def preparar_datos_grafica(
     x_raw = np.linspace(x_min, x_max, num_puntos)
     y_list: list[float] = []
 
+    # Solo se excluyen valores no reales, no definidos o no finitos.
+    # (Los valores grandes pero válidos, como exp(20), sí se grafican.)
     for x_val in x_raw:
         val = f(float(x_val))
-        if math.isnan(val) or math.isinf(val) or abs(val) > 1e6:
+        if math.isnan(val) or math.isinf(val):
             y_list.append(np.nan)
         else:
             y_list.append(val)
 
     y_arr = np.array(y_list, dtype=float)
 
-    # Detección de discontinuidades / asíntotas para no cruzar líneas verticales
-    # Si hay un cambio de signo y un salto numérico muy grande en el valor de y:
+    # Asíntotas detectadas simbólicamente: se inserta un punto (s, NaN) en cada
+    # singularidad para que matplotlib corte la línea y no una ambas ramas.
+    _, singularidades = detectar_discontinuidades(expr, x_min, x_max)
+    if singularidades:
+        x_raw = np.concatenate([x_raw, np.array(singularidades, dtype=float)])
+        y_arr = np.concatenate([y_arr, np.full(len(singularidades), np.nan)])
+        orden = np.argsort(x_raw, kind="stable")
+        x_raw, y_arr = x_raw[orden], y_arr[orden]
+
+    # Respaldo numérico: si hay un salto enorme con cambio de signo entre dos
+    # puntos contiguos (asíntota no localizada por SymPy), también se corta la línea.
     for i in range(1, len(y_arr)):
         y_prev = y_arr[i - 1]
         y_curr = y_arr[i]
