@@ -12,48 +12,70 @@ Hola! Estoy desarrollando la "Calculadora de Álgebra Lineal Next-Gen" para la a
 Por favor lee este contexto antes de responder:
 
 1. UBICACIÓN Y ESTRUCTURA DEL PROYECTO:
-   Ruta local: C:\Users\lxman\Desktop\Clases\Algebra\Calculadora de algebra lineal
+   Ruta local: C:\Users\lxman\Desktop\Clases\Algebra\Calculadora_Algebra_Lineal_Grupo
    - main.py: Punto de entrada en PyQt6.
-   - core/parser.py: Parser de fracciones (1/2, -3/4), enteros, decimales y captura ultra-robusta de errores. Usa `fractions.Fraction`.
-   - core/eliminacion_gaussiana.py: Motor de Eliminación por Filas (Gauss y Gauss-Jordan) en Python puro con precisión exacta de fracciones.
-   - gui/main_window.py: Dashboard con menú lateral navegable para futuros módulos.
-   - gui/modules/ecuaciones_widget.py: Interfaz interactiva del Módulo 1 (Sistemas de Ecuaciones Lineales).
-   - gui/styles.py: Estilos visuales en modo oscuro (PyQt6 QSS).
-   - ejecutar.bat / .vscode/launch.json: Archivos para iniciar la app directamente o con F5.
+   - core/parser.py: Parser de expresiones numéricas y fracciones.
+   - core/eliminacion_gaussiana.py: Motor de Eliminación por Filas (Gauss y Gauss-Jordan).
+   - core/algebra_avanzada.py: Determinantes, Cramer, Inversas y Espacios Vectoriales.
+   - core/factorizacion_lu.py: Descomposición LU (A = LU) y resolución en 2 etapas.
+   - core/metodos_numericos.py: Módulo 7 (Bisección desde cero, graficador de funciones, notación posicional bases 10 y 2, punto flotante y errores).
+   - gui/main_window.py: Dashboard con menú deslizable lateral, riel rápido y 7 módulos integrados.
+   - gui/modules/metodos_numericos_widget.py: Interfaz interactiva de Métodos Numéricos (Programa 7).
+   - gui/styles.py: Estilos visuales en modo oscuro y claro (PyQt6 QSS).
+   - tests/: Suite de pruebas unitarias (test_core.py) y de interfaz (test_interfaz.py).
 
-2. REGLAS TÉCNICAS DEL DOCENTE:
-   - Prohibido el uso de NumPy, SciPy o math integrados en los motores matemáticos de core/ para las tareas entregables (debe ser Python puro: listas, bucles y fractions.Fraction).
-   - Entrada flexible: Debe aceptar fracciones (ej: 1/2), decimales o enteros sin fallar.
-   - Captura de errores: El programa NUNCA debe colapsar por errores de usuario (división por cero, texto inválido).
+2. REGLAS TÉCNICAS DEL DOCENTE (PROGRAMA 7):
+   - Librerías autorizadas: NumPy, SciPy, SymPy, Matplotlib.
+   - Algoritmo propio: Bisección implementado desde cero; scipy.optimize.bisect usado únicamente para contrastar resultados.
+   - Seguridad: Prohibido usar eval() con entrada del usuario. Se usa SymPy con lista blanca estricta de funciones y símbolos permitidos.
+   - Validación robusta: Control de entradas no numéricas, límites incorrectos, tolerancias no positivas, divisiones por cero y discontinuidades.
 
 3. ESTADO ACTUAL DEL PROYECTO:
-   - Módulo 1 (Sistemas de Ecuaciones Lineales / Eliminación por filas) está 100% completado, probado y funcionando.
-   - Soporta paso a paso, clasificación de sistemas (Determinado, Indeterminado, Inconsistente) y comprobación automática Ax = b.
-
-Mi solicitud actual es la siguiente: [ESCRIBE AQUÍ LO QUE NECESITAS AJUSTAR O AGREGAR]
+   - 7 módulos completamente integrados y operativos:
+     1. Sistemas de Ecuaciones Lineales (Gauss / Gauss-Jordan)
+     2. Transformaciones Lineales [T(x) = Ax]
+     3. Operaciones Matriciales e Independencia Lineal
+     4. Determinantes y Regla de Cramer
+     5. Factorización LU y resolución Ax = b
+     6. Verificador de 16 propiedades y teoremas
+     7. Métodos Numéricos: Bisección, Graficador, Notación Posicional y Errores Numéricos.
 ```
 
 ---
 
-## 📁 Estructura del Código Creado
+## 📁 Estructura del Código
 
 ```
-Calculadora de algebra lineal/
-├── main.py                          # Launcher del sistema
-├── ejecutar.bat                     # Ejecutable con doble clic
-├── requirements.txt                 # Dependencias (PyQt6, sympy, numpy, matplotlib, pandas)
-├── CONTEXTO_PROYECTO.md             # Este documento de transferencia
-├── .vscode/
-│   ├── launch.json                  # F5 listo
-│   └── settings.json
+Calculadora_Algebra_Lineal_Grupo/
+├── main.py                                  # Launcher del sistema
+├── ejecutar.bat                             # Ejecutable con doble clic
+├── requirements.txt                         # Dependencias (PyQt6, sympy, numpy, matplotlib, scipy, pandas)
+├── CONTEXTO_PROYECTO.md                     # Documento de transferencia
 ├── core/
-│   ├── parser.py                    # Convierte '1/2' a Fraction(1, 2) y valida errores
-│   └── eliminacion_gaussiana.py    # Algoritmo de Gauss-Jordan con fracciones y pasos
-└── gui/
-    ├── main_window.py               # Menú lateral y contenedor de pestañas
-    ├── styles.py                    # Estilos CSS/QSS oscuros
-    └── modules/
-        └── ecuaciones_widget.py     # Widget interactivo de Sistemas de Ecuaciones (Tarea 1)
+│   ├── parser.py                            # Expresiones numéricas y fracciones
+│   ├── eliminacion_gaussiana.py            # Gauss y Gauss-Jordan
+│   ├── factorizacion_lu.py                 # Descomposición A = LU
+│   ├── algebra_avanzada.py                 # Determinantes, inversas, espacios vectoriales
+│   ├── transformaciones_lineales.py         # Análisis T(x) = Ax
+│   ├── operaciones_matriciales.py          # Suma, producto, transpuesta, combinación lineal
+│   ├── validadores.py                       # Validaciones matriciales
+│   └── metodos_numericos.py                 # Motor matemático del Módulo 7 (Programa 7)
+├── gui/
+│   ├── main_window.py                       # Menú lateral y orquestador de módulos
+│   ├── componentes.py                       # Iconos vectoriales y controles interactivos
+│   ├── entrada.py                           # Componentes de entrada y presentación de resultados
+│   ├── styles.py                            # Estilos QSS oscuros y claros
+│   └── modules/
+│       ├── ecuaciones_widget.py             # Módulo 1: Sistemas de Ecuaciones
+│       ├── transformaciones_widget.py       # Módulo 2: Transformaciones Lineales
+│       ├── operaciones_widget.py            # Módulo 3: Operaciones Matriciales
+│       ├── determinantes_widget.py          # Módulo 4: Determinantes y Cramer
+│       ├── lu_widget.py                     # Módulo 5: Factorización LU
+│       ├── verificador_widget.py            # Módulo 6: Verificador de Propiedades
+│       └── metodos_numericos_widget.py      # Módulo 7: Métodos Numéricos (Programa 7)
+└── tests/
+    ├── test_core.py                         # Pruebas unitarias de algoritmos
+    └── test_interfaz.py                     # Pruebas de integración de la GUI
 ```
 
 ---
@@ -61,17 +83,7 @@ Calculadora de algebra lineal/
 ## ⚙️ Cómo Ejecutar el Proyecto
 
 ```powershell
-cd "C:\Users\lxman\Desktop\Clases\Algebra\Calculadora de algebra lineal"
-.\venv\Scripts\python.exe main.py
+cd "c:\Users\lxman\Desktop\Clases\Algebra\Calculadora_Algebra_Lineal_Grupo"
+.\.venv\Scripts\python.exe main.py
 ```
 O presionando la tecla **F5** en VS Code / haciendo doble clic en **`ejecutar.bat`**.
-
----
-
-## 💡 Próximos Módulos Planificados por Semanas
-
-1. **Módulo 1 (COMPLETADO)**: Sistemas de Ecuaciones Lineales (Gauss / Gauss-Jordan).
-2. **Módulo 2 (PENDIENTE)**: Operaciones Matriciales (Suma, Producto, Traspuesta, Inversa paso a paso).
-3. **Módulo 3 (PENDIENTE)**: Determinantes y Regla de Cramer.
-4. **Módulo 4 (PENDIENTE)**: Vectores y Espacios Vectoriales (Independencia Lineal, Base, Ortogonalidad).
-5. **Módulo 5 (PENDIENTE)**: Aplicaciones Avanzadas (Modelo de Leontief, Valores y Vectores Propios).

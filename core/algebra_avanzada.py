@@ -1,8 +1,8 @@
 ﻿"""
-MÃ³dulo de Ãlgebra Avanzada: Inversa, Determinantes e Independencia Lineal.
-Tema: Matriz Inversa (SesiÃ³n 10), Determinantes por cofactores y reducciÃ³n (SesiÃ³n 11).
+Módulo de Álgebra Avanzada: Inversa, Determinantes e Independencia Lineal.
+Tema: Matriz Inversa (Sesión 10), Determinantes por cofactores y reducción (Sesión 11).
 Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
-               Antonio Esteban Vargas RamÃ­rez, Luis Xavier Aburto Mantilla.
+               Antonio Esteban Vargas Ramírez, Luis Xavier Aburto Mantilla.
 """
 from fractions import Fraction
 from core.eliminacion_gaussiana import reducir_por_filas
@@ -12,7 +12,7 @@ def copiar_matriz(A):
     return [[val for val in fila] for fila in A]
 
 # ==========================================
-# 1. MATRIZ INVERSA (vÃ­a Gauss-Jordan)
+# 1. MATRIZ INVERSA (vía Gauss-Jordan)
 # ==========================================
 def inversa_matriz(A, n):
     """
@@ -60,8 +60,8 @@ def inversa_matriz(A, n):
 # ==========================================
 def evaluar_independencia_lineal(vectores, n):
     """
-    EvalÃºa si un conjunto de vectores es L.I. o L.D.
-    vectores: lista de k vectores, cada uno de dimensiÃ³n n.
+    Evalúa si un conjunto de vectores es L.I. o L.D.
+    vectores: lista de k vectores, cada uno de dimensión n.
     Arma [v1 | v2 | ... | vk | 0] y reduce.
     """
     k = len(vectores)
@@ -93,7 +93,7 @@ def menor_complementario(A, i, j):
 
 def determinante_cofactores(A):
     """
-    Calcula el determinante usando expansiÃ³n por cofactores (recursivo).
+    Calcula el determinante usando expansión por cofactores (recursivo).
     Retorna (valor, pasos textuales).
     """
     n = len(A)
@@ -124,7 +124,7 @@ def determinante_cofactores(A):
 
 def determinante_reduccion(A):
     """
-    Calcula el determinante usando operaciones elementales (triangularizaciÃ³n).
+    Calcula el determinante usando operaciones elementales (triangularización).
     Retorna (valor, pasos).
     """
     n = len(A)

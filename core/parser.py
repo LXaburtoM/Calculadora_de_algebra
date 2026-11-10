@@ -5,6 +5,8 @@ Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
                Antonio Esteban Vargas Ramírez, Luis Xavier Aburto Mantilla.
 """
 
+from __future__ import annotations
+
 from fractions import Fraction
 import re
 import sympy as sp

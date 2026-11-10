@@ -6,10 +6,8 @@ Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
 """
 
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QTableWidget, QTableWidgetItem, QSpinBox, QCheckBox,
-    QTextEdit, QMessageBox, QGroupBox, QHeaderView, QTabWidget,
-    QComboBox
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTextEdit, QTextBrowser,
+    QMessageBox, QComboBox, QSplitter, QApplication
 )
 from PyQt6.QtCore import Qt
 from fractions import Fraction
@@ -20,158 +18,202 @@ from core.eliminacion_gaussiana import (
     nombre_var, entradas_principales
 )
 from core.modelos_aplicados import MODELOS
+from gui.componentes import EstadoVacio, BotonIcono, ControlSegmentado, PestanasSegmentadas, Tarjeta
+from gui.entrada import (
+    SelectorDimension, SelectorFormato, TablaMatriz, TecladoMatematico, Resumen,
+    grupo_dimensiones, boton_principal, contenedor_fila
+)
 
 ANCHO_MIN = 5
 SEP = "-" * 78
 
+METODOS = {"gauss": "Gauss", "gauss_jordan": "Gauss-Jordan"}
+
+
 class EcuacionesWidget(QWidget):
     def __init__(self):
         super().__init__()
+        self.metodo = "gauss_jordan"
+        self._ultima_accion = None
+        self._crear_barra()
         self.init_ui()
 
-    def init_ui(self):
-        layout = QVBoxLayout(self)
+    # ── Barra superior del módulo (la coloca MainWindow) ─────────────
 
-        # --- PANEL SUPERIOR: CONFIGURACIÓN Y MODELOS APLICADOS ---
-        top_layout = QHBoxLayout()
+    def _crear_barra(self):
+        self.barra_izq = QWidget()
+        lay = QHBoxLayout(self.barra_izq)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(8)
 
-        config_box = QGroupBox("1. Configuración del Sistema")
-        config_layout = QHBoxLayout(config_box)
-
-        config_layout.addWidget(QLabel("Ecuaciones (m):"))
-        self.spin_m = QSpinBox()
-        self.spin_m.setRange(1, 10)
-        self.spin_m.setValue(3)
-        self.spin_m.valueChanged.connect(self.actualizar_tabla)
-        config_layout.addWidget(self.spin_m)
-
-        config_layout.addWidget(QLabel("Variables (n):"))
-        self.spin_n = QSpinBox()
-        self.spin_n.setRange(1, 10)
-        self.spin_n.setValue(3)
-        self.spin_n.valueChanged.connect(self.actualizar_tabla)
-        config_layout.addWidget(self.spin_n)
-
-        self.chk_fracciones = QCheckBox("Mostrar como Fracciones (ej: 1/2)")
-        self.chk_fracciones.setChecked(True)
-        config_layout.addWidget(self.chk_fracciones)
-
-        btn_limpiar = QPushButton("Limpiar Tabla")
-        btn_limpiar.clicked.connect(self.limpiar_tabla)
-        config_layout.addWidget(btn_limpiar)
-
-        top_layout.addWidget(config_box, 2)
-
-        # Modelos Aplicados
-        modelos_box = QGroupBox("Plantillas de Modelos Aplicados")
-        modelos_layout = QHBoxLayout(modelos_box)
+        self.spin_m = SelectorDimension(3, "Ecuaciones (filas)")
+        self.spin_n = SelectorDimension(3, "Variables (columnas)")
+        lay.addWidget(grupo_dimensiones([self.spin_m, "×", self.spin_n]))
 
         self.combo_modelos = QComboBox()
-        self.combo_modelos.addItem("-- Seleccionar Problema Real --")
+        self.combo_modelos.setToolTip("Plantillas de modelos aplicados")
+        self.combo_modelos.addItem("Ejemplos")
         for m in MODELOS:
             self.combo_modelos.addItem(m["nombre"])
-        self.combo_modelos.currentIndexChanged.connect(self.cargar_modelo_seleccionado)
-        modelos_layout.addWidget(self.combo_modelos)
+        self.combo_modelos.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
+        self.combo_modelos.setMinimumContentsLength(12)
+        self.combo_modelos.view().setMinimumWidth(380)
+        self.combo_modelos.setFixedHeight(32)
+        lay.addWidget(self.combo_modelos)
 
-        top_layout.addWidget(modelos_box, 1)
-        layout.addLayout(top_layout)
-
-        # Cuadro de descripción de modelo aplicado (oculto por defecto)
-        self.lbl_modelo_info = QLabel("")
-        self.lbl_modelo_info.setStyleSheet("color: #38BDF8; background-color: #0F172A; border: 1px solid #334155; border-radius: 6px; padding: 8px;")
-        self.lbl_modelo_info.setWordWrap(True)
-        self.lbl_modelo_info.setVisible(False)
-        layout.addWidget(self.lbl_modelo_info)
-
-        # --- TABLA MATRIZ AUMENTADA ---
-        tabla_box = QGroupBox("2. Matriz Aumentada [A | b]  (Acepta enteros, decimales, fracciones 1/2 y constantes como pi, sen, cos)")
-        tabla_layout = QVBoxLayout(tabla_box)
-
-        self.tabla = QTableWidget()
-        tabla_layout.addWidget(self.tabla)
-
-        botones_layout = QHBoxLayout()
-
-        # Botón Gauss
-        btn_gauss = QPushButton("▶ Resolver por MÉTODO DE GAUSS (Escalonada + Sustitución)")
-        btn_gauss.setStyleSheet("background-color: #059669; color: white; font-weight: bold; padding: 8px;")
-        btn_gauss.clicked.connect(lambda: self.resolver_sistema(metodo="gauss"))
-        botones_layout.addWidget(btn_gauss)
-
-        # Botón Gauss-Jordan
-        btn_gauss_jordan = QPushButton("▶ Resolver por GAUSS-JORDAN (Escalonada Reducida RREF)")
-        btn_gauss_jordan.setStyleSheet("background-color: #0284C7; color: white; font-weight: bold; padding: 8px;")
-        btn_gauss_jordan.clicked.connect(lambda: self.resolver_sistema(metodo="gauss_jordan"))
-        botones_layout.addWidget(btn_gauss_jordan)
-
-        # Botón Verificar Forma
-        btn_forma = QPushButton("¿Está en Forma Escalonada?")
+        # Método visible (1 clic resuelve con él), comprobación de forma y acción principal
+        self.selector_metodo = ControlSegmentado(list(METODOS.values()))
+        self.selector_metodo.setToolTip("Método de resolución")
+        self.selector_metodo.seleccionar(list(METODOS).index(self.metodo))
+        self.selector_metodo.cambiado.connect(lambda i: self._elegir_metodo(list(METODOS)[i]))
+        btn_forma = QPushButton("¿Escalonada?")
+        btn_forma.setToolTip("¿Está la matriz en forma escalonada?")
+        btn_forma.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_forma.clicked.connect(self.analizar_forma_actual)
-        botones_layout.addWidget(btn_forma)
+        self.btn_resolver = boton_principal("Resolver", "Resolver (Ctrl+Enter)", self.accion_principal)
+        self.barra_der = contenedor_fila(self.selector_metodo, btn_forma, self.btn_resolver)
 
-        tabla_layout.addLayout(botones_layout)
-        layout.addWidget(tabla_box)
+    def barra_contexto(self):
+        return self.barra_izq, self.barra_der
 
-        # --- RESULTADOS EN PESTAÑAS ---
-        res_box = QGroupBox("3. Resultados y Análisis Teórico")
-        res_layout = QVBoxLayout(res_box)
+    def accion_principal(self):
+        self.resolver_sistema(metodo=self.metodo)
 
-        self.tabs = QTabWidget()
-        self.txt_pasos = self._nueva_pestania("Procedimiento paso a paso")
-        self.txt_formas = self._nueva_pestania("Formas escalonadas y pivotes")
-        self.txt_analisis = self._nueva_pestania("Existencia y unicidad")
-        self.txt_verif = self._nueva_pestania("Verificación")
-        res_layout.addWidget(self.tabs)
+    def _elegir_metodo(self, clave):
+        self.metodo = clave
+        self.resolver_sistema(metodo=clave)
 
-        layout.addWidget(res_box)
-        layout.setStretch(0, 0)
-        layout.setStretch(1, 0)
-        layout.setStretch(2, 0)
-        layout.setStretch(3, 1)
+    # ── Cuerpo ──────────────────────────────────────────────────────
 
+    def init_ui(self):
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+
+        divisor = QSplitter(Qt.Orientation.Horizontal)
+        divisor.setHandleWidth(12)
+        divisor.setChildrenCollapsible(False)
+
+        izquierda = QWidget()
+        izq = QVBoxLayout(izquierda)
+        izq.setContentsMargins(0, 0, 0, 0)
+        izq.setSpacing(12)
+        izq.addWidget(self._crear_tarjeta_matriz(), 1)
+        self.teclado = TecladoMatematico()
+        self.teclado.registrar(self.tabla)
+        self.teclado.fin_de_entrada.connect(self.accion_principal)
+        izq.addStretch(0)
+        izq.addWidget(self.teclado)
+
+        divisor.addWidget(izquierda)
+        divisor.addWidget(self._crear_tarjeta_resultados())
+        divisor.setSizes([600, 600])
+        layout.addWidget(divisor)
+
+        self.spin_m.valueChanged.connect(self.actualizar_tabla)
+        self.spin_n.valueChanged.connect(self.actualizar_tabla)
+        self.combo_modelos.currentIndexChanged.connect(self.cargar_modelo_seleccionado)
         self.actualizar_tabla()
+
+    def _crear_tarjeta_matriz(self):
+        tarjeta = Tarjeta("[A | b]")
+        tarjeta.setToolTip("Acepta enteros, decimales, fracciones (1/2) y funciones (pi, sen, cos…)")
+        self.btn_limpiar = BotonIcono("borrar", "Limpiar tabla", 16)
+        self.btn_limpiar.clicked.connect(self.limpiar_tabla)
+        tarjeta.agregar_a_cabecera(self.btn_limpiar)
+
+        self.tabla = TablaMatriz(expandir=True)
+        tarjeta.lay.addWidget(self.tabla)
+
+        # Enunciado del modelo aplicado (visible al elegir un ejemplo)
+        self.lbl_modelo_info = QTextBrowser()
+        self.lbl_modelo_info.setObjectName("ModelInfo")
+        self.lbl_modelo_info.setMaximumHeight(150)
+        self.lbl_modelo_info.setVisible(False)
+        tarjeta.lay.addWidget(self.lbl_modelo_info)
+        return tarjeta
+
+    def _crear_tarjeta_resultados(self):
+        tarjeta = Tarjeta()
+        self.tabs = PestanasSegmentadas()
+        self.txt_pasos = self._nueva_pestania("Pasos")
+        self.txt_formas = self._nueva_pestania("Pivotes")
+        self.txt_analisis = self._nueva_pestania("Existencia")
+        self.txt_verif = self._nueva_pestania("Verificación")
+        tarjeta.cabecera.addWidget(self.tabs.crear_control())
+        tarjeta.cabecera.addStretch()
+
+        self.chk_fracciones = SelectorFormato()
+        self.chk_fracciones.cambiado.connect(self._repetir_ultima_accion)
+        tarjeta.cabecera.addWidget(self.chk_fracciones)
+
+        self.btn_copiar = BotonIcono("copiar", "Copiar pestaña actual", 16)
+        self.btn_copiar.clicked.connect(self._copiar_resultado)
+        tarjeta.cabecera.addWidget(self.btn_copiar)
+
+        self.resumen = Resumen()
+        tarjeta.lay.addWidget(self.resumen)
+
+        tarjeta.lay.addWidget(self.tabs, 1)
+        return tarjeta
 
     def _nueva_pestania(self, titulo):
         txt = QTextEdit()
         txt.setReadOnly(True)
+        EstadoVacio(txt, "Los resultados aparecerán aquí al resolver el sistema.")
         txt.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
         self.tabs.addTab(txt, titulo)
         return txt
 
+    def aplicar_tema(self, paleta):
+        for b in (self.btn_limpiar, self.btn_copiar):
+            b.aplicar_tema(paleta)
+        self.teclado.aplicar_tema(paleta)
+
+    # ── Resultados ──────────────────────────────────────────────────
+
+    def _mostrar_resumen(self, estado, titulo, valor=""):
+        self.resumen.mostrar(estado, titulo, valor)
+
+    def _limpiar_resultados(self):
+        """Los resultados dejan de valer cuando cambia la matriz de entrada."""
+        self._ultima_accion = None
+        self.resumen.setVisible(False)
+        for txt in (self.txt_pasos, self.txt_formas, self.txt_analisis, self.txt_verif):
+            txt.clear()
+
+    def _repetir_ultima_accion(self):
+        if self._ultima_accion == "forma":
+            self.analizar_forma_actual()
+        elif self._ultima_accion:
+            self.resolver_sistema(metodo=self._ultima_accion)
+
+    def _copiar_resultado(self):
+        actual = self.tabs.currentWidget()
+        if actual is not None:
+            QApplication.clipboard().setText(actual.toPlainText())
+
+    # ── Datos de la tabla ───────────────────────────────────────────
+
     def actualizar_tabla(self):
         m = self.spin_m.value()
         n = self.spin_n.value()
-
-        self.tabla.setRowCount(m)
-        self.tabla.setColumnCount(n + 1)
-
-        headers = [nombre_var(j) for j in range(n)] + ["b"]
-        self.tabla.setHorizontalHeaderLabels(headers)
-        self.tabla.setVerticalHeaderLabels([f"R{i + 1}" for i in range(m)])
-
-        for i in range(m):
-            for j in range(n + 1):
-                if not self.tabla.item(i, j):
-                    item = QTableWidgetItem("0")
-                    item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                    self.tabla.setItem(i, j, item)
-
-        self.tabla.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        alto = self.tabla.horizontalHeader().height() + 6
-        for i in range(m):
-            alto += self.tabla.rowHeight(i)
-        self.tabla.setMaximumHeight(min(alto, 200))
+        self.tabla.redimensionar(m, n + 1, [nombre_var(j) for j in range(n)] + ["b"],
+                                 [f"R{i + 1}" for i in range(m)])
+        self._limpiar_resultados()
 
     def limpiar_tabla(self):
-        for i in range(self.tabla.rowCount()):
-            for j in range(self.tabla.columnCount()):
-                self.tabla.item(i, j).setText("0")
-        self.lbl_modelo_info.setVisible(False)
+        self.tabla.limpiar()
+        self._mostrar_info(False)
         self.combo_modelos.setCurrentIndex(0)
+        self._limpiar_resultados()
+
+    def _mostrar_info(self, visible):
+        self.lbl_modelo_info.setVisible(visible)
+        self.tabla.parentWidget().ajustar_a_contenido()
 
     def cargar_modelo_seleccionado(self, idx):
         if idx <= 0:
-            self.lbl_modelo_info.setVisible(False)
+            self._mostrar_info(False)
             return
 
         modelo = MODELOS[idx - 1]
@@ -188,11 +230,13 @@ class EcuacionesWidget(QWidget):
             f"{modelo['descripcion']}<br><br>"
             f"<b>Variables:</b> {', '.join(modelo['variables'])}<br>"
             f"<b>Ecuaciones del modelo:</b><br>• " + "<br>• ".join(modelo["ecuaciones"])
-        )
-        self.lbl_modelo_info.setText(info_text)
-        self.lbl_modelo_info.setVisible(True)
+        ).replace("\n", "<br>")
+        self.lbl_modelo_info.setHtml(info_text)
+        self._mostrar_info(True)
+        self._limpiar_resultados()
 
     def leer_matriz(self):
+        self.tabla.terminar_edicion()
         m = self.spin_m.value()
         n = self.spin_n.value()
         matriz = []
@@ -217,10 +261,15 @@ class EcuacionesWidget(QWidget):
         return matriz, None
 
     def _mostrar_errores(self, errores):
+        plural = "s" if len(errores) > 1 else ""
+        self._mostrar_resumen("error", f"Revisa {len(errores)} celda{plural}")
         msg = "Se encontraron errores en las celdas ingresadas:\n\n" + "\n".join(errores)
         QMessageBox.critical(self, "Error en los Datos", msg)
 
+    # ── Análisis ────────────────────────────────────────────────────
+
     def analizar_forma_actual(self):
+        self._ultima_accion = "forma"
         matriz, errores = self.leer_matriz()
         if errores:
             self._mostrar_errores(errores)
@@ -262,16 +311,20 @@ class EcuacionesWidget(QWidget):
         lineas.append(SEP)
         if analisis["reducida"]:
             lineas.append("DICTAMEN: La matriz está en FORMA ESCALONADA REDUCIDA (RREF).")
+            self._mostrar_resumen("ok", "Forma escalonada reducida", "RREF")
         elif analisis["escalonada"]:
             lineas.append("DICTAMEN: La matriz está en FORMA ESCALONADA (REF), pero no reducida.")
+            self._mostrar_resumen("aviso", "Forma escalonada, no reducida", "REF")
         else:
             lineas.append("DICTAMEN: La matriz NO está en forma escalonada.")
+            self._mostrar_resumen("error", "No está en forma escalonada")
         lineas.append(SEP)
 
         self.txt_formas.setText("\n".join(lineas))
         self.tabs.setCurrentWidget(self.txt_formas)
 
     def resolver_sistema(self, metodo="gauss_jordan"):
+        self._ultima_accion = metodo
         matriz, errores = self.leer_matriz()
         if errores:
             self._mostrar_errores(errores)
@@ -385,6 +438,17 @@ class EcuacionesWidget(QWidget):
             lineas_analisis.append(self._render_forma_vectorial(p_vec, dirs, n, frac))
 
         self.txt_analisis.setText("\n".join(lineas_analisis))
+
+        # Resumen de una línea
+        if clasif["tipo"] == "INCONSISTENTE":
+            self._mostrar_resumen("error", "Sin solución", f"0 = {formato_numero(resultado['ref'][resultado['fila_contradiccion']][n], frac)}")
+        elif clasif["tipo"] == "INDETERMINADO":
+            self._mostrar_resumen("aviso", "Infinitas soluciones",
+                                  "libres: " + ", ".join(nombre_var(j) for j in clasif["libres"]))
+        else:
+            despejes = solucion_general(resultado["rref"], m, n, resultado["pivotes"])
+            self._mostrar_resumen("ok", "Solución única",
+                                  "   ".join(f"{nombre_var(d['var'])} = {formato_numero(d['const'], frac)}" for d in despejes))
 
         # 4. PESTAÑA 4: VERIFICACIÓN
         lineas_verif = [

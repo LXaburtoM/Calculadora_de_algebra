@@ -4,23 +4,21 @@ Tema: Descomposición LU (A = L·U) y resolución en 2 etapas (Sesión 12).
 Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
                Antonio Esteban Vargas Ramírez, Luis Xavier Aburto Mantilla.
 """
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QTableWidget, QTableWidgetItem, QSpinBox, QCheckBox,
-    QTextEdit, QMessageBox, QGroupBox, QHeaderView, QComboBox
-)
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QMessageBox, QComboBox
 from PyQt6.QtCore import Qt
-from fractions import Fraction
 from core.parser import formato_numero
+from core.eliminacion_gaussiana import nombre_var
 from core.factorizacion_lu import (
     factorizacion_lu, resolver_sistema_lu, verificar_solucion_ax_b
 )
-from core.validadores import (
-    leer_matriz_segura, leer_vector_seguro, mostrar_error
+from gui.componentes import BotonIcono
+from gui.entrada import (
+    SelectorDimension, TablaMatriz, leer_matriz_segura, TecladoMatematico, TarjetaResultado,
+    grupo_dimensiones, boton_principal, contenedor_fila, pagina_seccion, tarjeta_tabla
 )
 
-SEP = "=" * 78
-SUBSEP = "-" * 78
+SEP = "=" * 60
+SUBSEP = "-" * 60
 
 TEOREMAS_LU = """
 ================================================================================
@@ -56,6 +54,16 @@ TEOREMAS_LU = """
 ================================================================================
 """
 
+# (nombre, A, b) de los ejemplos predefinidos
+EJEMPLOS = [
+    ("Ejemplo 1: Sistema 3x3 estándar",
+     [["2", "1", "-1"], ["1", "3", "2"], ["1", "0", "2"]], ["8", "13", "7"]),
+    ("Ejemplo 2: Matriz que requiere pivoteo (PA=LU)",
+     [["0", "2", "1"], ["1", "1", "1"], ["2", "1", "0"]], ["1", "2", "3"]),
+    ("Ejemplo 3: Matriz rectangular 4x3",
+     [["1", "2", "1"], ["2", "5", "3"], ["3", "7", "5"], ["1", "3", "2"]], ["4", "9", "14", "5"]),
+]
+
 
 class LUWidget(QWidget):
     def __init__(self):
@@ -63,197 +71,147 @@ class LUWidget(QWidget):
         self.ultima_matriz_L = None
         self.ultima_matriz_U = None
         self.matriz_A_factorizada = None
+        self._ultima_accion = None
+        self._cargando_ejemplo = False
+        self._crear_barra()
         self.init_ui()
 
-    def init_ui(self):
-        layout = QVBoxLayout(self)
+    # ── Barra superior del módulo (la coloca MainWindow) ─────────────
 
-        encabezado = QLabel("Factorización LU y Solución Ax = b")
-        encabezado.setObjectName("SectionHeader")
-        encabezado.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(encabezado)
+    def _crear_barra(self):
+        self.spin_m = SelectorDimension(3, "Filas m", 6, minimo=2)
+        self.spin_n = SelectorDimension(3, "Columnas n", 6, minimo=2)
+        dims = grupo_dimensiones(["  A ", self.spin_m, "×", self.spin_n])
 
-        # ── 1. Barra de Controles y Parámetros (Estilo Oficial del Proyecto) ──
-        ctrl_box = QGroupBox("Configuración del Sistema")
-        ctrl_lay = QHBoxLayout(ctrl_box)
-
-        ctrl_lay.addWidget(QLabel("Filas m:"))
-        self.spin_m = QSpinBox()
-        self.spin_m.setRange(2, 6)
-        self.spin_m.setValue(3)
-        self.spin_m.valueChanged.connect(self._actualizar_tablas)
-        ctrl_lay.addWidget(self.spin_m)
-
-        ctrl_lay.addWidget(QLabel("Columnas n:"))
-        self.spin_n = QSpinBox()
-        self.spin_n.setRange(2, 6)
-        self.spin_n.setValue(3)
-        self.spin_n.valueChanged.connect(self._actualizar_tablas)
-        ctrl_lay.addWidget(self.spin_n)
-
-        self.chk_frac = QCheckBox("Fracciones")
-        self.chk_frac.setChecked(True)
-        ctrl_lay.addWidget(self.chk_frac)
-
-        ctrl_lay.addSpacing(10)
-
-        # Botón 0: Teoremas Clave del Módulo (Exigido en rúbrica)
-        btn_teoremas = QPushButton("0. Ver Teoremas Clave")
-        btn_teoremas.clicked.connect(self._mostrar_teoremas_lu)
-        ctrl_lay.addWidget(btn_teoremas)
-
-        # Selector de ejemplos predefinidos
         self.combo_ejemplos = QComboBox()
-        self.combo_ejemplos.addItems([
-            "-- Cargar Ejemplo --",
-            "Ejemplo 1: Sistema 3x3 estándar",
-            "Ejemplo 2: Matriz que requiere pivoteo (PA=LU)",
-            "Ejemplo 3: Matriz rectangular 4x3"
-        ])
-        self.combo_ejemplos.currentIndexChanged.connect(self._cargar_ejemplo)
-        ctrl_lay.addWidget(self.combo_ejemplos)
+        self.combo_ejemplos.addItems(["Ejemplos"] + [nombre for nombre, _, _ in EJEMPLOS])
+        self.combo_ejemplos.setToolTip("Cargar un ejemplo predefinido")
+        self.combo_ejemplos.setFixedHeight(32)
+        self.combo_ejemplos.view().setMinimumWidth(340)
+        self.combo_ejemplos.activated.connect(self._cargar_ejemplo)
+        self.barra_izq = contenedor_fila(dims, self.combo_ejemplos)
 
-        ctrl_lay.addStretch()
-
-        # Botón 1: Factorizar A = LU
-        self.btn_factorizar = QPushButton("▶ 1. Factorizar A = LU")
+        # Las dos acciones del módulo a un clic: factorizar y resolver
+        self.btn_factorizar = QPushButton("Factorizar A = LU")
+        self.btn_factorizar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_factorizar.clicked.connect(self._ejecutar_factorizacion)
-        ctrl_lay.addWidget(self.btn_factorizar)
+        self.btn_resolver = boton_principal("Resolver Ax = b", "Resolver con LU (Ctrl+Enter)",
+                                            self._ejecutar_resolucion)
+        self.barra_der = contenedor_fila(self.btn_factorizar, self.btn_resolver)
 
-        # Botón 2: Resolver Ax = b con LU
-        self.btn_resolver = QPushButton("▶ 2. Resolver Ax = b con LU")
-        self.btn_resolver.setObjectName("PrimaryButton")
-        self.btn_resolver.clicked.connect(self._ejecutar_resolucion)
-        ctrl_lay.addWidget(self.btn_resolver)
+    def barra_contexto(self):
+        return self.barra_izq, self.barra_der
 
-        layout.addWidget(ctrl_box)
+    def accion_principal(self):
+        self._ejecutar_resolucion()
 
-        # ── 2. Tablas de Entrada (Matriz A y Vector b) ────────────────
-        tablas_layout = QHBoxLayout()
+    # ── Cuerpo ──────────────────────────────────────────────────────
 
-        box_A = QGroupBox("Matriz A (m × n)")
-        lay_A = QVBoxLayout(box_A)
-        self.tabla_A = QTableWidget()
-        lay_A.addWidget(self.tabla_A)
-        tablas_layout.addWidget(box_A, stretch=3)
+    def init_ui(self):
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
 
-        box_b = QGroupBox("Vector de términos independientes b (m × 1)")
-        lay_b = QVBoxLayout(box_b)
-        self.tabla_b = QTableWidget()
-        lay_b.addWidget(self.tabla_b)
-        tablas_layout.addWidget(box_b, stretch=1)
+        self.tabla = TablaMatriz(filas_visibles=6, expandir=True)
+        tarjeta = tarjeta_tabla("[A | b]", self.tabla, "Matriz A (m × n) y términos independientes b")
+        self.teclado = TecladoMatematico()
+        self.teclado.registrar(self.tabla)
+        self.teclado.fin_de_entrada.connect(self.accion_principal)
 
-        layout.addLayout(tablas_layout)
+        self.res = TarjetaResultado(mensaje_vacio="Los resultados aparecerán aquí al factorizar o resolver.")
+        self.res.formato.cambiado.connect(self._repetir_ultima_accion)
+        self.chk_frac = self.res.formato
+        self.txt_salida = self.res.texto
+        # El procedimiento de core/ usa separadores largos: sin ajuste de línea se leen enteros
+        self.txt_salida.setLineWrapMode(self.txt_salida.LineWrapMode.NoWrap)
+        self.btn_limpiar = BotonIcono("borrar", "Limpiar procedimiento", 16)
+        self.btn_limpiar.clicked.connect(self._limpiar_consola)
+        self.res.cabecera.addWidget(self.btn_limpiar)
 
-        # ── 3. Área de Procedimiento y Resultados ─────────────────────
-        res_box = QGroupBox("Procedimiento y Resultados")
-        res_lay = QVBoxLayout(res_box)
+        layout.addWidget(pagina_seccion([], [(tarjeta, 1), (None, 0), (self.teclado, 0)], self.res))
 
-        barra_res = QHBoxLayout()
-        lbl_info = QLabel("Detalle de operaciones elementales, matrices L, U y comprobaciones")
-        barra_res.addWidget(lbl_info)
-        barra_res.addStretch()
-
-        btn_limpiar = QPushButton("Limpiar")
-        btn_limpiar.clicked.connect(self._limpiar_consola)
-        barra_res.addWidget(btn_limpiar)
-        res_lay.addLayout(barra_res)
-
-        self.txt_salida = QTextEdit()
-        self.txt_salida.setReadOnly(True)
-        res_lay.addWidget(self.txt_salida)
-
-        layout.addWidget(res_box)
-
+        self.spin_m.valueChanged.connect(self._actualizar_tablas)
+        self.spin_n.valueChanged.connect(self._actualizar_tablas)
         self._actualizar_tablas()
         self._cargar_ejemplo_defecto()
 
-    def _mostrar_teoremas_lu(self):
-        """Muestra la ventana emergente con los teoremas clave del módulo."""
-        QMessageBox.information(self, "0. Teoremas Clave del Módulo LU", TEOREMAS_LU)
+    def aplicar_tema(self, paleta):
+        for w in (self.res, self.teclado, self.btn_limpiar):
+            w.aplicar_tema(paleta)
 
     def _limpiar_consola(self):
         """Limpia el área de texto."""
         self.txt_salida.clear()
+        self.res.resumen.setVisible(False)
+        self._ultima_accion = None
+
+    def _repetir_ultima_accion(self):
+        if self._ultima_accion == "factorizar":
+            self._ejecutar_factorizacion()
+        elif self._ultima_accion == "resolver":
+            # Si el procedimiento incluía la factorización, se rehace completo
+            if "1. FACTORIZACIÓN" in self.txt_salida.toPlainText():
+                self._ejecutar_factorizacion()
+            self._ejecutar_resolucion()
 
     def _actualizar_tablas(self):
-        """Redimensiona las tablas de A y b según m y n."""
+        """Redimensiona la tabla [A | b] según m y n."""
         m = self.spin_m.value()
         n = self.spin_n.value()
+        self.tabla.redimensionar(m, n + 1, [nombre_var(j) for j in range(n)] + ["b"],
+                                 [f"F{i+1}" for i in range(m)])
+        # Si las dimensiones cambian a mano, el ejemplo mostrado ya no corresponde
+        if not self._cargando_ejemplo:
+            self.combo_ejemplos.setCurrentIndex(0)
+        self.btn_resolver.setEnabled(m == n)
+        self.btn_resolver.setToolTip("Resolver con LU (Ctrl+Enter)" if m == n
+                                     else "Para resolver Ax = b la matriz debe ser cuadrada (m = n)")
 
-        # Tabla A (m x n)
-        self.tabla_A.setRowCount(m)
-        self.tabla_A.setColumnCount(n)
-        self.tabla_A.setHorizontalHeaderLabels([f"Col {j+1}" for j in range(n)])
-        self.tabla_A.setVerticalHeaderLabels([f"F{i+1}" for i in range(m)])
-        for i in range(m):
-            for j in range(n):
-                if not self.tabla_A.item(i, j):
-                    it = QTableWidgetItem("0")
-                    it.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                    self.tabla_A.setItem(i, j, it)
-        self.tabla_A.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-
-        # Tabla b (m x 1)
-        self.tabla_b.setRowCount(m)
-        self.tabla_b.setColumnCount(1)
-        self.tabla_b.setHorizontalHeaderLabels(["b"])
-        self.tabla_b.setVerticalHeaderLabels([f"b{i+1}" for i in range(m)])
-        for i in range(m):
-            if not self.tabla_b.item(i, 0):
-                it = QTableWidgetItem("0")
-                it.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.tabla_b.setItem(i, 0, it)
-        self.tabla_b.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+    def _llenar(self, A, b):
+        n = len(A[0])
+        for i, fila in enumerate(A):
+            for j, valor in enumerate(fila):
+                self.tabla.item(i, j).setText(valor)
+            self.tabla.item(i, n).setText(b[i])
 
     def _cargar_ejemplo_defecto(self):
         """Carga una matriz estándar por defecto."""
-        A = [["2", "1", "-1"], ["1", "3", "2"], ["1", "0", "2"]]
-        b = ["8", "13", "7"]
-        for i in range(3):
-            for j in range(3):
-                self.tabla_A.setItem(i, j, QTableWidgetItem(A[i][j]))
-            self.tabla_b.setItem(i, 0, QTableWidgetItem(b[i]))
+        _, A, b = EJEMPLOS[0]
+        self._llenar(A, b)
 
     def _cargar_ejemplo(self, idx):
         """Carga ejemplos de prueba en la interfaz."""
-        if idx == 1:  # 3x3 estándar
-            self.spin_m.setValue(3)
-            self.spin_n.setValue(3)
-            self._actualizar_tablas()
-            self._cargar_ejemplo_defecto()
-        elif idx == 2:  # Requiere permutación
-            self.spin_m.setValue(3)
-            self.spin_n.setValue(3)
-            self._actualizar_tablas()
-            A = [["0", "2", "1"], ["1", "1", "1"], ["2", "1", "0"]]
-            b = ["1", "2", "3"]
-            for i in range(3):
-                for j in range(3):
-                    self.tabla_A.setItem(i, j, QTableWidgetItem(A[i][j]))
-                self.tabla_b.setItem(i, 0, QTableWidgetItem(b[i]))
-        elif idx == 3:  # Rectangular 4x3
-            self.spin_m.setValue(4)
-            self.spin_n.setValue(3)
-            self._actualizar_tablas()
-            A = [["1", "2", "1"], ["2", "5", "3"], ["3", "7", "5"], ["1", "3", "2"]]
-            b = ["4", "9", "14", "5"]
-            for i in range(4):
-                for j in range(3):
-                    self.tabla_A.setItem(i, j, QTableWidgetItem(A[i][j]))
-                self.tabla_b.setItem(i, 0, QTableWidgetItem(b[i]))
+        if idx <= 0:
+            return
+        _, A, b = EJEMPLOS[idx - 1]
+        self._cargando_ejemplo = True
+        self.spin_m.setValue(len(A))
+        self.spin_n.setValue(len(A[0]))
+        self._cargando_ejemplo = False
+        self._llenar(A, b)
+        self._limpiar_consola()
 
-    # ── BOTÓN 1: FACTORIZAR A = LU ───────────────────────────────────
+    def _leer(self):
+        """Devuelve (A, b) desde la tabla aumentada, o None si hay errores."""
+        self.tabla.terminar_edicion()
+        m, n = self.spin_m.value(), self.spin_n.value()
+        aumentada, errores = leer_matriz_segura(self.tabla, m, n + 1, "[A|b]")
+        if errores:
+            self.res.resumen.mostrar("error", "Error en los datos")
+            QMessageBox.critical(self, "Error en los datos", "\n".join(errores))
+            return None
+        return [fila[:n] for fila in aumentada], [fila[n] for fila in aumentada]
+
+    # ── FACTORIZAR A = LU ───────────────────────────────────────────
 
     def _ejecutar_factorizacion(self):
         """Calcula únicamente la factorización A = LU con evolución paso a paso."""
-        m = self.spin_m.value()
-        n = self.spin_n.value()
-        frac = self.chk_frac.isChecked()
-
-        matriz_A, errA = leer_matriz_segura(self.tabla_A, m, n, "A")
-        if mostrar_error(self, errA):
+        datos = self._leer()
+        if datos is None:
             return
+        matriz_A, _ = datos
+        m, n = self.spin_m.value(), self.spin_n.value()
+        frac = self.chk_frac.isChecked()
+        self._ultima_accion = "factorizar"
 
         matriz_L, matriz_U, pasos, err_lu = factorizacion_lu(matriz_A, m, n, frac)
 
@@ -272,19 +230,20 @@ class LUWidget(QWidget):
             self.ultima_matriz_L = None
             self.ultima_matriz_U = None
             self.matriz_A_factorizada = None
+            self.res.resumen.mostrar("aviso", "No admite LU sin intercambios", "requiere PA = LU")
         else:
             self.ultima_matriz_L = matriz_L
             self.ultima_matriz_U = matriz_U
             self.matriz_A_factorizada = matriz_A
+            self.res.resumen.mostrar("ok", "A = L · U", f"L {m}×{m} · U {m}×{n}")
 
         self.txt_salida.setText("\n".join(lineas))
 
-    # ── BOTÓN 2: RESOLVER Ax = b CON LU ──────────────────────────────
+    # ── RESOLVER Ax = b CON LU ──────────────────────────────────────
 
     def _ejecutar_resolucion(self):
         """Resuelve el sistema Ax = b utilizando la factorización LU en dos etapas."""
-        m = self.spin_m.value()
-        n = self.spin_n.value()
+        m, n = self.spin_m.value(), self.spin_n.value()
         frac = self.chk_frac.isChecked()
 
         if m != n:
@@ -295,16 +254,16 @@ class LUWidget(QWidget):
             )
             return
 
-        matriz_A, errA = leer_matriz_segura(self.tabla_A, m, n, "A")
-        vector_b, errB = leer_vector_seguro(self.tabla_b, m, "b")
-        errores = errA + errB
-        if mostrar_error(self, errores):
+        datos = self._leer()
+        if datos is None:
             return
+        matriz_A, vector_b = datos
 
         # Si no se ha factorizado la matriz actual, se factoriza primero
         if (self.ultima_matriz_L is None or self.matriz_A_factorizada != matriz_A):
             matriz_L, matriz_U, _, err_lu = factorizacion_lu(matriz_A, m, n, frac)
             if err_lu:
+                self.res.resumen.mostrar("aviso", "No admite LU sin intercambios", "requiere PA = LU")
                 QMessageBox.critical(self, "Error en Factorización", err_lu)
                 return
             self.ultima_matriz_L = matriz_L
@@ -316,10 +275,12 @@ class LUWidget(QWidget):
         )
 
         if err_sol:
+            self.res.resumen.mostrar("error", "No se pudo resolver")
             QMessageBox.critical(self, "Error al resolver sistema", err_sol)
             return
 
-        _, _, pasos_verif = verificar_solucion_ax_b(matriz_A, vector_x, vector_b, n, frac)
+        es_exacta, _, pasos_verif = verificar_solucion_ax_b(matriz_A, vector_x, vector_b, n, frac)
+        self._ultima_accion = "resolver"
 
         lineas = []
         lineas.extend(pasos_sol)
@@ -331,3 +292,8 @@ class LUWidget(QWidget):
             self.txt_salida.append("\n\n" + "\n".join(lineas))
         else:
             self.txt_salida.setText("\n".join(lineas))
+
+        self.res.resumen.mostrar("ok" if es_exacta else "aviso",
+                                 "Solución" + ("  ·  A·x = b" if es_exacta else ""),
+                                 "   ".join(f"{nombre_var(i)} = {formato_numero(vector_x[i], frac)}"
+                                            for i in range(n)))
