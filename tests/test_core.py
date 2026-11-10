@@ -126,5 +126,67 @@ class TestTransformaciones(unittest.TestCase):
         self.assertTrue(analisis["pertenece_rango"])
 
 
+class TestMetodosNumericos(unittest.TestCase):
+    def test_biseccion_casos_guia(self):
+        from core.metodos_numericos import metodo_biseccion
+        # Caso 1: x^3 - 2x - 5 en [2, 3]
+        r1 = metodo_biseccion("x**3 - 2*x - 5", 2, 3, tol=1e-4)
+        self.assertTrue(r1["exito"])
+        self.assertAlmostEqual(r1["raiz"], 2.09455148, places=3)
+        self.assertEqual(r1["n_teorico"], 14)
+
+        # Caso 2: cos(x) - x en [0, 1]
+        r2 = metodo_biseccion("cos(x) - x", 0, 1, tol=1e-4)
+        self.assertTrue(r2["exito"])
+        self.assertAlmostEqual(r2["raiz"], 0.73908513, places=3)
+        self.assertEqual(r2["n_teorico"], 14)
+
+        # Caso 3: x^2 - 2 en [1, 2]
+        r3 = metodo_biseccion("x**2 - 2", 1, 2, tol=1e-4)
+        self.assertTrue(r3["exito"])
+        self.assertAlmostEqual(r3["raiz"], 1.41421356, places=3)
+
+        # Caso 4: x^3 + x - 1 en [0, 1]
+        r4 = metodo_biseccion("x**3 + x - 1", 0, 1, tol=1e-4)
+        self.assertTrue(r4["exito"])
+        self.assertAlmostEqual(r4["raiz"], 0.68232780, places=3)
+
+    def test_biseccion_pruebas_obligatorias(self):
+        from core.metodos_numericos import metodo_biseccion
+        # 1. Sin cambio de signo
+        r1 = metodo_biseccion("x**2 + 1", -1, 1)
+        self.assertFalse(r1["exito"])
+
+        # 2. Raíz en extremo
+        r2 = metodo_biseccion("x**2 - 1", 1, 2)
+        self.assertTrue(r2["exito"])
+        self.assertEqual(r2["raiz"], 1.0)
+
+        # 3. Discontinuidad 1/x
+        r3 = metodo_biseccion("1/x", -1, 1)
+        self.assertTrue(len(r3["advertencias"]) > 0)
+
+        # 4. Iteraciones insuficientes
+        r4 = metodo_biseccion("x**3 - 2*x - 5", 2, 3, tol=1e-4, max_iter=3)
+        self.assertFalse(r4["exito"])
+
+    def test_notacion_posicional(self):
+        from core.metodos_numericos import analisis_posicional_completo
+        p10 = analisis_posicional_completo("84506")
+        self.assertEqual(p10["decimal"], 84506)
+        p2 = analisis_posicional_completo("0b11110011")
+        self.assertEqual(p2["decimal"], 243)
+
+    def test_errores_y_flotante(self):
+        from core.metodos_numericos import demostracion_punto_flotante, calcular_errores_absoluto_relativo
+        fp = demostracion_punto_flotante()
+        self.assertFalse(fp["resultado_comparacion"])
+        err = calcular_errores_absoluto_relativo(10.0, 9.8)
+        self.assertAlmostEqual(err["error_absoluto"], 0.2)
+        self.assertAlmostEqual(err["error_porcentual"], 2.0)
+        err_zero = calcular_errores_absoluto_relativo(0.0, 1.0)
+        self.assertIsNone(err_zero["error_relativo"])
+
+
 if __name__ == "__main__":
     unittest.main()

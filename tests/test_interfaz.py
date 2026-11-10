@@ -136,5 +136,25 @@ class TestInterfaz(unittest.TestCase):
         self.assertTrue(self.w.acciones_tema["sistema"].isChecked())
 
 
+    def test_metodos_numericos_gui(self):
+        m = self.w.metodos_numericos_widget
+        self.w.activar_modulo(6)
+        m.txt_fn_biseccion.setText("x**3 - 2*x - 5")
+        m.txt_a.setText("2")
+        m.txt_b.setText("3")
+        m.accion_principal()
+        self.assertIn("Raíz hallada", resumen(m.res_biseccion)[0])
+
+        m.selector_seccion.grupo.button(2).click()
+        m.txt_posicional.setText("84506")
+        m.accion_principal()
+        self.assertIn("84506", resumen(m.res_posicional)[0])
+        self.assertIn("Equivalencia", resumen(m.res_posicional)[1])
+
+        m.selector_seccion.grupo.button(3).click()
+        m.accion_principal()
+        self.assertIn("Punto Flotante", resumen(m.res_errores)[0])
+
+
 if __name__ == "__main__":
     unittest.main()

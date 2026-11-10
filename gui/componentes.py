@@ -94,6 +94,11 @@ def _trazos(nombre):
     elif nombre == "mod_verificador":
         p.addEllipse(QPointF(8, 8), 6.2, 6.2)
         p.moveTo(5.2, 8.3); p.lineTo(7.2, 10.3); p.lineTo(10.9, 6.2)
+    elif nombre == "mod_metodos_numericos":
+        # Curva de funcion cruzando eje x con raiz aproximada
+        p.moveTo(2.5, 9.5); p.lineTo(13.5, 9.5)
+        p.moveTo(3.5, 13.5); p.quadTo(7.5, 10.5, 12.5, 2.5)
+        p.addEllipse(QPointF(8.0, 9.5), 1.2, 1.2)
     elif nombre == "check":
         p.moveTo(3.5, 8.5); p.lineTo(6.5, 11.5); p.lineTo(12.5, 4.5)
     elif nombre == "chevron":

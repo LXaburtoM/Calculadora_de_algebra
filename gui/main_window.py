@@ -21,6 +21,7 @@ from gui.modules.operaciones_widget import OperacionesWidget
 from gui.modules.determinantes_widget import DeterminantesWidget
 from gui.modules.lu_widget import LUWidget, TEOREMAS_LU
 from gui.modules.verificador_widget import VerificadorWidget
+from gui.modules.metodos_numericos_widget import MetodosNumericosWidget
 from gui.styles import construir_estilo, colores_enfasis, TEMAS, ENFASIS
 from gui.componentes import BotonIcono, icono, icono_estados
 from gui.entrada import TablaMatriz
@@ -41,6 +42,7 @@ MODULOS = [
     ("mod_determinantes", "Determinantes", "Sarrus, cofactores, Cramer"),
     ("mod_lu", "Factorización LU", "Solución de Ax = b"),
     ("mod_verificador", "Verificador", "16 propiedades"),
+    ("mod_metodos_numericos", "Métodos Numéricos", "Bisección, Gráfica, Errores"),
 ]
 
 TEOREMAS = [
@@ -76,6 +78,23 @@ TEOREMAS = [
         "2. Matriz Inversa: (A⁻¹)⁻¹=A, (AB)⁻¹=B⁻¹A⁻¹, (Aᵀ)⁻¹=(A⁻¹)ᵀ, A·A⁻¹=I.\n"
         "3. Determinantes: det(Aᵀ)=det(A), det(AB)=det(A)det(B), det(A⁻¹)=1/det(A), det(kA)=kⁿdet(A), "
         "operaciones de fila, y determinante de matriz triangular."
+    ),
+    (
+        "Módulo 7: Métodos Numéricos\n\n"
+        "1. Teorema de Bolzano (Existencia de Raíces):\n"
+        "   Si f(x) es continua en [a, b] y f(a)·f(b) < 0, existe al menos un r ∈ (a, b) tal que f(r) = 0.\n\n"
+        "2. Método de Bisección:\n"
+        "   • Punto medio: xr = (a + b) / 2.\n"
+        "   • Cota del error por semiancho: Eb = (b - a) / 2.\n"
+        "   • Cota en el paso n: |r - xr,n| ≤ (b - a) / 2ⁿ.\n"
+        "   • Número teórico de iteraciones: n = ⌈log₂((b - a) / E)⌉.\n"
+        "   • Error relativo aproximado: εa = |(xr,k - xr,k-1) / xr,k| (si xr,k ≠ 0).\n\n"
+        "3. Representación en Punto Flotante (IEEE 754):\n"
+        "   • 0.1 + 0.2 ≠ 0.3 por el redondeo de fracciones binarias periódicas.\n"
+        "   • Épsilon de máquina (eps ≈ 2.22e-16): distancia entre 1.0 y el siguiente representable.\n\n"
+        "4. Propagación de Errores:\n"
+        "   • Aproximación lineal por derivada: Δy_aprox = f'(x) · Δx.\n"
+        "   • Cambio real: Δy_real = f(x + Δx) - f(x)."
     ),
 ]
 
@@ -181,9 +200,11 @@ class MainWindow(QMainWindow):
         self.determinantes_widget = DeterminantesWidget()
         self.lu_widget = LUWidget()
         self.verificador_widget = VerificadorWidget()
+        self.metodos_numericos_widget = MetodosNumericosWidget()
         self.modulos = [
             self.ecuaciones_widget, self.transformaciones_widget, self.operaciones_widget,
             self.determinantes_widget, self.lu_widget, self.verificador_widget,
+            self.metodos_numericos_widget,
         ]
 
         main_layout.addWidget(self._crear_riel())
