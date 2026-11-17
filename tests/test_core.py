@@ -188,5 +188,137 @@ class TestMetodosNumericos(unittest.TestCase):
         self.assertIsNone(err_zero["error_relativo"])
 
 
+class TestMetodosIterativos(unittest.TestCase):
+    def setUp(self):
+        import numpy as np
+        self.np = np
+
+    def test_validaciones_entradas(self):
+        from core.metodos_iterativos import validar_entradas_iterativas
+        # Matriz no cuadrada
+        _, _, _, err1 = validar_entradas_iterativas([[1, 2, 3], [4, 5, 6]], [1, 2])
+        self.assertIsNotNone(err1)
+        self.assertIn("cuadrada", err1)
+
+        # Tolerancia negativa
+        _, _, _, err2 = validar_entradas_iterativas([[2, 1], [1, 3]], [1, 2], tol=-0.01)
+        self.assertIsNotNone(err2)
+        self.assertIn("positiva", err2)
+
+        # Máximo de iteraciones <= 0
+        _, _, _, err3 = validar_entradas_iterativas([[2, 1], [1, 3]], [1, 2], max_iter=0)
+        self.assertIsNotNone(err3)
+
+    def test_caso_1_convergencia_y_dominancia(self):
+        from core.metodos_iterativos import (
+            metodo_jacobi, metodo_gauss_seidel, CASOS_PRUEBA,
+            analizar_diagonal_y_convergencia, comparar_jacobi_y_seidel
+        )
+        c1 = CASOS_PRUEBA[0]
+        analisis = analizar_diagonal_y_convergencia(self.np.array(c1["A"]))
+        self.assertTrue(analisis["es_estrictamente_dominante"])
+        self.assertFalse(analisis["tiene_ceros"])
+        self.assertLess(analisis["rho_jacobi"], 1.0)
+        self.assertLess(analisis["rho_seidel"], 1.0)
+
+        res_j = metodo_jacobi(c1["A"], c1["b"], c1["x0"], tol=c1["tol"], max_iter=c1["max_iter"])
+        res_gs = metodo_gauss_seidel(c1["A"], c1["b"], c1["x0"], tol=c1["tol"], max_iter=c1["max_iter"])
+
+        self.assertTrue(res_j.convergio)
+        self.assertTrue(res_gs.convergio)
+        self.assertLess(res_gs.num_iteraciones, res_j.num_iteraciones)  # GS suele ser más rápido
+        self.assertTrue(self.np.allclose(res_j.x_final, [1.0, -2.0, 1.0], atol=1e-3))
+        self.assertTrue(self.np.allclose(res_gs.x_final, [1.0, -2.0, 1.0], atol=1e-3))
+
+        comp = comparar_jacobi_y_seidel(res_j, res_gs, self.np.array(c1["A"]), self.np.array(c1["b"]))
+        self.assertLess(comp["diff_entre_metodos"], 1e-3)
+        self.assertLess(comp["error_ref_j"], 1e-3)
+        self.assertLess(comp["error_ref_gs"], 1e-3)
+
+    def test_caso_2_cero_diagonal_y_reordenamiento(self):
+        from core.metodos_iterativos import (
+            metodo_jacobi, metodo_gauss_seidel, CASOS_PRUEBA,
+            analizar_diagonal_y_convergencia, evaluar_reordenamiento_filas
+        )
+        c2 = CASOS_PRUEBA[2]
+        A2 = self.np.array(c2["A"])
+        b2 = self.np.array(c2["b"])
+
+        # Sin reordenar, tiene ceros en la diagonal y falla inmediatamente
+        analisis_orig = analizar_diagonal_y_convergencia(A2)
+        self.assertTrue(analisis_orig["tiene_ceros"])
+        res_fail = metodo_jacobi(A2, b2)
+        self.assertFalse(res_fail.convergio)
+        self.assertEqual(res_fail.estado, "ERROR_DIAGONAL")
+
+        # Al reordenar filas, encuentra una permutación estrictamente dominante
+        reord = evaluar_reordenamiento_filas(A2, b2)
+        self.assertTrue(reord["es_posible"])
+        self.assertEqual(reord["tipo_resultado"], "CONV_ESTRICTA")
+
+        res_j = metodo_jacobi(reord["A_reordenada"], reord["b_reordenado"])
+        res_gs = metodo_gauss_seidel(reord["A_reordenada"], reord["b_reordenado"])
+        self.assertTrue(res_j.convergio)
+        self.assertTrue(res_gs.convergio)
+
+    def test_caso_2b_cero_insalvable(self):
+        from core.metodos_iterativos import CASOS_PRUEBA, evaluar_reordenamiento_filas
+        c2b = CASOS_PRUEBA[3]
+        A2b = self.np.array(c2b["A"])
+        b2b = self.np.array(c2b["b"])
+
+        reord = evaluar_reordenamiento_filas(A2b, b2b)
+        self.assertFalse(reord["es_posible"])
+        self.assertEqual(reord["tipo_resultado"], "NO_POSIBLE")
+
+    def test_caso_3_divergencia_controlada(self):
+        from core.metodos_iterativos import (
+            metodo_jacobi, metodo_gauss_seidel, CASOS_PRUEBA,
+            analizar_diagonal_y_convergencia
+        )
+        c3 = CASOS_PRUEBA[4]
+        analisis = analizar_diagonal_y_convergencia(self.np.array(c3["A"]))
+        self.assertFalse(analisis["es_estrictamente_dominante"])
+        self.assertGreater(analisis["rho_jacobi"], 1.0)
+        self.assertGreater(analisis["rho_seidel"], 1.0)
+
+        # Debe detectar la divergencia sin crashear ni lanzar excepciones no controladas
+        res_j = metodo_jacobi(c3["A"], c3["b"], max_iter=30)
+        res_gs = metodo_gauss_seidel(c3["A"], c3["b"], max_iter=30)
+        self.assertFalse(res_j.convergio)
+        self.assertFalse(res_gs.convergio)
+
+    def test_caso_3b_no_dominante_pero_convergente(self):
+        from core.metodos_iterativos import (
+            metodo_jacobi, metodo_gauss_seidel, CASOS_PRUEBA,
+            analizar_diagonal_y_convergencia
+        )
+        c3b = CASOS_PRUEBA[5]
+        analisis = analizar_diagonal_y_convergencia(self.np.array(c3b["A"]))
+        # No es estrictamente dominante
+        self.assertFalse(analisis["es_estrictamente_dominante"])
+        # Pero ambos radios espectrales son menores que 1
+        self.assertLess(analisis["rho_jacobi"], 1.0)
+        self.assertLess(analisis["rho_seidel"], 1.0)
+
+        res_j = metodo_jacobi(c3b["A"], c3b["b"], tol=1e-4, max_iter=60)
+        res_gs = metodo_gauss_seidel(c3b["A"], c3b["b"], tol=1e-4, max_iter=60)
+        self.assertTrue(res_j.convergio)
+        self.assertTrue(res_gs.convergio)
+        self.assertTrue(self.np.allclose(res_j.x_final, [1.0, 2.0], atol=1e-3))
+        self.assertTrue(self.np.allclose(res_gs.x_final, [1.0, 2.0], atol=1e-3))
+
+    def test_dataframe_iteraciones(self):
+        from core.metodos_iterativos import metodo_jacobi, CASOS_PRUEBA
+        c1 = CASOS_PRUEBA[0]
+        res = metodo_jacobi(c1["A"], c1["b"], tol=1e-4, max_iter=20)
+        df = res.a_dataframe()
+        self.assertGreater(len(df), 0)
+        self.assertIn("Iteración", df.columns)
+        self.assertIn("Error (||Δx||_∞)", df.columns)
+        self.assertIn("Residuo (||Ax-b||_∞)", df.columns)
+
+
+
 if __name__ == "__main__":
     unittest.main()

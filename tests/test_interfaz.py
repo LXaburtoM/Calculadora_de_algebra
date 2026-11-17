@@ -155,6 +155,28 @@ class TestInterfaz(unittest.TestCase):
         m.accion_principal()
         self.assertIn("Punto Flotante", resumen(m.res_errores)[0])
 
+    def test_iterativos_gui(self):
+        it = self.w.iterativos_widget
+        self.w.activar_modulo(7)
+
+        # Cargar Caso 1 desde combo y calcular
+        it.combo_casos.setCurrentIndex(1)
+        it.accion_principal()
+        self.assertIn("Convergencia", resumen(it.resumen)[0])
+        self.assertGreater(it.tabla_widget_j.rowCount(), 0)
+        self.assertGreater(it.tabla_widget_gs.rowCount(), 0)
+        self.assertIn("Solución Jacobi", it.txt_comparacion.toPlainText())
+        self.assertIn("DESARROLLO ANALÍTICO", it.txt_pasos.toPlainText())
+
+        # Probar evaluación de diagonal y reordenamiento en Caso 2
+        it.combo_casos.setCurrentIndex(3)  # Caso 2: Cero en diagonal
+        it.accion_principal()
+        self.assertIn("Cero en Diagonal", resumen(it.resumen)[0])
+        self.assertTrue(it.btn_aplicar_reord.isEnabled())
+        it.btn_aplicar_reord.click()
+        it.accion_principal()
+        self.assertIn("Convergencia", resumen(it.resumen)[0])
+
 
 if __name__ == "__main__":
     unittest.main()

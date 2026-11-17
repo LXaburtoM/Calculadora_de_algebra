@@ -99,6 +99,12 @@ def _trazos(nombre):
         p.moveTo(2.5, 9.5); p.lineTo(13.5, 9.5)
         p.moveTo(3.5, 13.5); p.quadTo(7.5, 10.5, 12.5, 2.5)
         p.addEllipse(QPointF(8.0, 9.5), 1.2, 1.2)
+    elif nombre == "mod_iterativos":
+        # Flechas circulares / ciclo iterativo x^(k) -> x^(k+1)
+        p.arcMoveTo(QRectF(3, 3, 10, 10), 30)
+        p.arcTo(QRectF(3, 3, 10, 10), 30, 280)
+        p.moveTo(10.5, 6.0); p.lineTo(13.2, 4.2); p.lineTo(13.5, 8.0)
+        p.moveTo(5.5, 9.0); p.lineTo(8.0, 7.5); p.lineTo(8.0, 10.5)
     elif nombre == "check":
         p.moveTo(3.5, 8.5); p.lineTo(6.5, 11.5); p.lineTo(12.5, 4.5)
     elif nombre == "chevron":

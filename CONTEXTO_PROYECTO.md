@@ -19,19 +19,23 @@ Por favor lee este contexto antes de responder:
    - core/algebra_avanzada.py: Determinantes, Cramer, Inversas y Espacios Vectoriales.
    - core/factorizacion_lu.py: Descomposición LU (A = LU) y resolución en 2 etapas.
    - core/metodos_numericos.py: Módulo 7 (Bisección desde cero, graficador de funciones, notación posicional bases 10 y 2, punto flotante y errores).
-   - gui/main_window.py: Dashboard con menú deslizable lateral, riel rápido y 7 módulos integrados.
+   - core/metodos_iterativos.py: Módulo 8 (Métodos iterativos de Jacobi y Gauss-Seidel, dominancia diagonal, reordenamiento de ecuaciones, radios espectrales y validación).
+   - gui/main_window.py: Dashboard con menú deslizable lateral, riel rápido y 8 módulos integrados.
    - gui/modules/metodos_numericos_widget.py: Interfaz interactiva de Métodos Numéricos (Programa 7).
+   - gui/modules/iterativos_widget.py: Interfaz interactiva de Métodos Iterativos Jacobi y Gauss-Seidel (Programa 8).
    - gui/styles.py: Estilos visuales en modo oscuro y claro (PyQt6 QSS).
    - tests/: Suite de pruebas unitarias (test_core.py) y de interfaz (test_interfaz.py).
 
-2. REGLAS TÉCNICAS DEL DOCENTE (PROGRAMA 7):
-   - Librerías autorizadas: NumPy, SciPy, SymPy, Matplotlib.
-   - Algoritmo propio: Bisección implementado desde cero; scipy.optimize.bisect usado únicamente para contrastar resultados.
-   - Seguridad: Prohibido usar eval() con entrada del usuario. Se usa SymPy con lista blanca estricta de funciones y símbolos permitidos.
-   - Validación robusta: Control de entradas no numéricas, límites incorrectos, tolerancias no positivas, divisiones por cero y discontinuidades.
+2. REGLAS TÉCNICAS DEL DOCENTE (PROGRAMA 8):
+   - Librerías autorizadas: NumPy para operaciones numéricas y validación; Pandas para tablas; Matplotlib para gráficas; SymPy cuando se requiera manejo simbólico.
+   - Algoritmos propios implementados desde cero: Jacobi (actualización simultánea usando x^(k-1)) y Gauss-Seidel (actualización inmediata sucesiva en sitio).
+   - Función de referencia: numpy.linalg.solve(A, b) usada únicamente para contrastar resultados y calcular discrepancias/residuos, no para sustituir la implementación iterativa.
+   - Criterio de parada consistente: ||x^(k) - x^(k-1)||_∞ ≤ ε y registro de residuo ||Ax - b||_∞.
+   - Manejo de diagonal: Comprobación de ceros en la diagonal, análisis de dominancia estricta por filas (condición suficiente pero NO necesaria, ρ(T) < 1 necesaria y suficiente), y asistente de reordenamiento/permutación de filas.
+   - Robustez: Detección preventiva de divergencia y desbordamientos (Inf/NaN) sin cerrar inesperadamente la calculadora.
 
 3. ESTADO ACTUAL DEL PROYECTO:
-   - 7 módulos completamente integrados y operativos:
+   - 8 módulos completamente integrados y operativos:
      1. Sistemas de Ecuaciones Lineales (Gauss / Gauss-Jordan)
      2. Transformaciones Lineales [T(x) = Ax]
      3. Operaciones Matriciales e Independencia Lineal
@@ -39,6 +43,7 @@ Por favor lee este contexto antes de responder:
      5. Factorización LU y resolución Ax = b
      6. Verificador de 16 propiedades y teoremas
      7. Métodos Numéricos: Bisección, Graficador, Notación Posicional y Errores Numéricos.
+     8. Métodos Numéricos Iterativos: Jacobi y Gauss-Seidel (Programa 8).
 ```
 
 ---
@@ -59,7 +64,8 @@ Calculadora_Algebra_Lineal_Grupo/
 │   ├── transformaciones_lineales.py         # Análisis T(x) = Ax
 │   ├── operaciones_matriciales.py          # Suma, producto, transpuesta, combinación lineal
 │   ├── validadores.py                       # Validaciones matriciales
-│   └── metodos_numericos.py                 # Motor matemático del Módulo 7 (Programa 7)
+│   ├── metodos_numericos.py                 # Motor matemático del Módulo 7 (Programa 7)
+│   └── metodos_iterativos.py                # Motor matemático del Módulo 8: Jacobi y Gauss-Seidel (Programa 8)
 ├── gui/
 │   ├── main_window.py                       # Menú lateral y orquestador de módulos
 │   ├── componentes.py                       # Iconos vectoriales y controles interactivos
@@ -72,7 +78,8 @@ Calculadora_Algebra_Lineal_Grupo/
 │       ├── determinantes_widget.py          # Módulo 4: Determinantes y Cramer
 │       ├── lu_widget.py                     # Módulo 5: Factorización LU
 │       ├── verificador_widget.py            # Módulo 6: Verificador de Propiedades
-│       └── metodos_numericos_widget.py      # Módulo 7: Métodos Numéricos (Programa 7)
+│       ├── metodos_numericos_widget.py      # Módulo 7: Métodos Numéricos (Programa 7)
+│       └── iterativos_widget.py             # Módulo 8: Métodos Iterativos (Programa 8)
 └── tests/
     ├── test_core.py                         # Pruebas unitarias de algoritmos
     └── test_interfaz.py                     # Pruebas de integración de la GUI
