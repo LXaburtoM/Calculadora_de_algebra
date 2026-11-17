@@ -29,7 +29,7 @@ from matplotlib.backends.backend_qtagg import NavigationToolbar2QT as Navigation
 from core.metodos_numericos import (
     metodo_biseccion, preparar_datos_grafica, analisis_posicional_completo,
     demostracion_punto_flotante, calcular_errores_absoluto_relativo,
-    calcular_propagacion_error, compilar_funcion
+    calcular_propagacion_error, compilar_funcion, detectar_discontinuidades
 )
 from gui.componentes import ControlSegmentado, Tarjeta
 from gui.entrada import TarjetaResultado, boton_principal, contenedor_fila
@@ -324,7 +324,10 @@ class MetodosNumericosWidget(QWidget):
             self._ultima_raiz_calculada = res["raiz"]
             self._ultimo_intervalo = (a_val, b_val)
             self._ultima_expr_biseccion = fn_str
-            lineas.append(f"\n» RAÍZ APROXIMADA HALLADA: xr = {res['raiz']:.8f}")
+            if res.get("discontinuidad"):
+                lineas.append(f"\n» PUNTO FINAL (NO GARANTIZADO COMO RAÍZ): xr = {res['raiz']:.8f}")
+            else:
+                lineas.append(f"\n» RAÍZ APROXIMADA HALLADA: xr = {res['raiz']:.8f}")
             lineas.append(f"» VALOR f(xr): {res['f_raiz']:.8e}")
             lineas.append(f"» ITERACIONES REALIZADAS: {res['iteraciones_realizadas']} de {res['n_teorico']} teóricas")
 
@@ -332,7 +335,13 @@ class MetodosNumericosWidget(QWidget):
                 lineas.append(f"» CONTRASTE CON SciPy (bisect): {res['raiz_scipy']:.8f}")
                 lineas.append(f"» DIFERENCIA ABSOLUTA |x_propio - x_scipy|: {res['dif_scipy']:.6e}")
 
-            if res["exito"]:
+            if res.get("discontinuidad"):
+                self.res_biseccion.resumen.mostrar(
+                    "error",
+                    "No se cumplen las condiciones",
+                    "f no es continua en [a, b]"
+                )
+            elif res["exito"]:
                 self.res_biseccion.resumen.mostrar(
                     "ok",
                     f"Raíz hallada: xr ≈ {res['raiz']:.6f}",
@@ -523,9 +532,13 @@ class MetodosNumericosWidget(QWidget):
         ax.grid(True, linestyle=":", alpha=0.6)
         ax.legend(loc="best", framealpha=0.85)
 
-        # Ajuste de límites verticales para no desbordar en saltos de discontinuidad
+        # Ajuste de límites verticales solo si hay asíntotas/discontinuidades:
+        # cerca de una asíntota los valores crecen sin límite y aplastarían la gráfica.
+        # Si la función es continua (ej. exp(x)) se muestra su rango completo.
+        expr_graf, _, _ = compilar_funcion(fn_str)
+        es_continua, _ = detectar_discontinuidades(expr_graf, xmin, xmax) if expr_graf is not None else (True, [])
         y_valid = y_vals[~np.isnan(y_vals)]
-        if len(y_valid) > 0:
+        if len(y_valid) > 0 and es_continua is not True:
             q25, q75 = np.percentile(y_valid, 10), np.percentile(y_valid, 90)
             iqr = max(1.0, q75 - q25)
             y_min_lim = max(np.min(y_valid), q25 - 1.5 * iqr)
