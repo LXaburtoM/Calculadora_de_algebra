@@ -2,5 +2,5 @@ PyQt6
 sympy
 numpy
 matplotlib
+scipy
 pandas
-

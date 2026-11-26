@@ -21,6 +21,8 @@ from gui.modules.operaciones_widget import OperacionesWidget
 from gui.modules.determinantes_widget import DeterminantesWidget
 from gui.modules.lu_widget import LUWidget, TEOREMAS_LU
 from gui.modules.verificador_widget import VerificadorWidget
+from gui.modules.metodos_numericos_widget import MetodosNumericosWidget
+from gui.modules.iterativos_widget import IterativosWidget
 from gui.modules.newton_widget import NewtonWidget
 from core.newton import CRITERIO
 from gui.styles import construir_estilo, colores_enfasis, TEMAS, ENFASIS
@@ -43,6 +45,8 @@ MODULOS = [
     ("mod_determinantes", "Determinantes", "Sarrus, cofactores, Cramer"),
     ("mod_lu", "Factorización LU", "Solución de Ax = b"),
     ("mod_verificador", "Verificador", "16 propiedades"),
+    ("mod_metodos_numericos", "Métodos Numéricos", "Bisección, Gráfica, Errores"),
+    ("mod_iterativos", "Métodos Iterativos", "Jacobi y Gauss-Seidel"),
     ("mod_newton", "Newton-Raphson", "Raíces de funciones"),
 ]
 
@@ -79,6 +83,50 @@ TEOREMAS = [
         "2. Matriz Inversa: (A⁻¹)⁻¹=A, (AB)⁻¹=B⁻¹A⁻¹, (Aᵀ)⁻¹=(A⁻¹)ᵀ, A·A⁻¹=I.\n"
         "3. Determinantes: det(Aᵀ)=det(A), det(AB)=det(A)det(B), det(A⁻¹)=1/det(A), det(kA)=kⁿdet(A), "
         "operaciones de fila, y determinante de matriz triangular."
+    ),
+    (
+        "Módulo 7: Métodos Numéricos\n\n"
+        "1. Teorema de Bolzano (Existencia de Raíces):\n"
+        "   Si f(x) es continua en [a, b] y f(a)·f(b) < 0, existe al menos un r ∈ (a, b) tal que f(r) = 0.\n\n"
+        "2. Método de Bisección:\n"
+        "   • Punto medio: xr = (a + b) / 2.\n"
+        "   • Cota del error por semiancho: Eb = (b - a) / 2.\n"
+        "   • Cota en el paso n: |r - xr,n| ≤ (b - a) / 2ⁿ.\n"
+        "   • Número teórico de iteraciones: n = ⌈log₂((b - a) / E)⌉.\n"
+        "   • Error relativo aproximado: εa = |(xr,k - xr,k-1) / xr,k| (si xr,k ≠ 0).\n\n"
+        "3. Representación en Punto Flotante (IEEE 754):\n"
+        "   • 0.1 + 0.2 ≠ 0.3 por el redondeo de fracciones binarias periódicas.\n"
+        "   • Épsilon de máquina (eps ≈ 2.22e-16): distancia entre 1.0 y el siguiente representable.\n\n"
+        "4. Propagación de Errores:\n"
+        "   • Aproximación lineal por derivada: Δy_aprox = f'(x) · Δx.\n"
+        "   • Cambio real: Δy_real = f(x + Δx) - f(x)."
+    ),
+    (
+        "Módulo 8: Métodos Numéricos Iterativos (Jacobi y Gauss-Seidel)\n\n"
+        "1. Planteamiento General:\n"
+        "   Descomposición de la matriz de coeficientes: A = D - L - U\n"
+        "   donde D es diagonal, L triangular inferior estricta y U triangular superior estricta.\n\n"
+        "2. Método de Jacobi (Actualización Simultánea):\n"
+        "   • Ecuación matricial: x⁽ᵏ⁾ = D⁻¹(L + U)x⁽ᵏ⁻¹⁾ + D⁻¹b\n"
+        "   • Forma escalar:\n"
+        "     x_i⁽ᵏ⁾ = (1 / a_ii) · [ b_i - ∑_{j≠i} a_ij · x_j⁽ᵏ⁻¹⁾ ]\n"
+        "   • Todos los nuevos valores x_i⁽ᵏ⁾ se calculan usando exclusivamente los valores de la iteración previa x⁽ᵏ⁻¹⁾.\n\n"
+        "3. Método de Gauss-Seidel (Actualización Inmediata/Sucesiva):\n"
+        "   • Ecuación matricial: x⁽ᵏ⁾ = (D - L)⁻¹ U x⁽ᵏ⁻¹⁾ + (D - L)⁻¹ b\n"
+        "   • Forma escalar:\n"
+        "     x_i⁽ᵏ⁾ = (1 / a_ii) · [ b_i - ∑_{j<i} a_ij · x_j⁽ᵏ⁾ - ∑_{j>i} a_ij · x_j⁽ᵏ⁻¹⁾ ]\n"
+        "   • Utiliza inmediatamente los valores recién calculados dentro de la misma iteración k, lo que generalmente acelera la convergencia.\n\n"
+        "4. Criterios de Convergencia:\n"
+        "   • Condición Suficiente (Dominancia Diagonal Estricta por filas):\n"
+        "     |a_ii| > ∑_{j≠i} |a_ij| para todo i = 1, ..., n.\n"
+        "     ¡FUNDAMENTO ESENCIAL!: Es condición SUFICIENTE pero NO necesaria. Su ausencia no implica divergencia.\n"
+        "   • Condición Necesaria y Suficiente (Radio Espectral):\n"
+        "     El método converge para cualquier vector inicial x⁽⁰⁾ si y solo si ρ(T) < 1,\n"
+        "     donde ρ(T) = max |λ_i| es el radio espectral de la matriz de iteración T.\n\n"
+        "5. Criterios de Parada y Control:\n"
+        "   • Error entre iteraciones sucesivas: ||x⁽ᵏ⁾ - x⁽ᵏ⁻¹⁾||_∞ ≤ ε\n"
+        "   • Residuo final: ||Ax - b||_∞\n"
+        "   • Detección de divergencia y desbordamiento ante crecimiento descontrolado de errores."
     ),
     "Newton-Raphson\n\nxᵢ₊₁ = xᵢ − f(xᵢ) / f′(xᵢ)\n\n" + CRITERIO
     + "\n\nEl proceso se detiene si |f′(xᵢ)| ≤ 10⁻¹² o si se agotan las iteraciones.",
@@ -186,10 +234,13 @@ class MainWindow(QMainWindow):
         self.determinantes_widget = DeterminantesWidget()
         self.lu_widget = LUWidget()
         self.verificador_widget = VerificadorWidget()
+        self.metodos_numericos_widget = MetodosNumericosWidget()
+        self.iterativos_widget = IterativosWidget()
         self.newton_widget = NewtonWidget()
         self.modulos = [
             self.ecuaciones_widget, self.transformaciones_widget, self.operaciones_widget,
-            self.determinantes_widget, self.lu_widget, self.verificador_widget, self.newton_widget,
+            self.determinantes_widget, self.lu_widget, self.verificador_widget,
+            self.metodos_numericos_widget, self.iterativos_widget, self.newton_widget,
         ]
 
         main_layout.addWidget(self._crear_riel())
