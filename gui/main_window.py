@@ -21,6 +21,8 @@ from gui.modules.operaciones_widget import OperacionesWidget
 from gui.modules.determinantes_widget import DeterminantesWidget
 from gui.modules.lu_widget import LUWidget, TEOREMAS_LU
 from gui.modules.verificador_widget import VerificadorWidget
+from gui.modules.newton_widget import NewtonWidget
+from core.newton import CRITERIO
 from gui.styles import construir_estilo, colores_enfasis, TEMAS, ENFASIS
 from gui.componentes import BotonIcono, icono, icono_estados
 from gui.entrada import TablaMatriz
@@ -41,6 +43,7 @@ MODULOS = [
     ("mod_determinantes", "Determinantes", "Sarrus, cofactores, Cramer"),
     ("mod_lu", "Factorización LU", "Solución de Ax = b"),
     ("mod_verificador", "Verificador", "16 propiedades"),
+    ("mod_newton", "Newton-Raphson", "Raíces de funciones"),
 ]
 
 TEOREMAS = [
@@ -77,6 +80,8 @@ TEOREMAS = [
         "3. Determinantes: det(Aᵀ)=det(A), det(AB)=det(A)det(B), det(A⁻¹)=1/det(A), det(kA)=kⁿdet(A), "
         "operaciones de fila, y determinante de matriz triangular."
     ),
+    "Newton-Raphson\n\nxᵢ₊₁ = xᵢ − f(xᵢ) / f′(xᵢ)\n\n" + CRITERIO
+    + "\n\nEl proceso se detiene si |f′(xᵢ)| ≤ 10⁻¹² o si se agotan las iteraciones.",
 ]
 
 
@@ -181,9 +186,10 @@ class MainWindow(QMainWindow):
         self.determinantes_widget = DeterminantesWidget()
         self.lu_widget = LUWidget()
         self.verificador_widget = VerificadorWidget()
+        self.newton_widget = NewtonWidget()
         self.modulos = [
             self.ecuaciones_widget, self.transformaciones_widget, self.operaciones_widget,
-            self.determinantes_widget, self.lu_widget, self.verificador_widget,
+            self.determinantes_widget, self.lu_widget, self.verificador_widget, self.newton_widget,
         ]
 
         main_layout.addWidget(self._crear_riel())
