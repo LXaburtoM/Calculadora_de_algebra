@@ -105,6 +105,30 @@ class TestInterfaz(unittest.TestCase):
         self.assertFalse(l.btn_resolver.isEnabled())
         self.assertEqual(l.combo_ejemplos.currentIndex(), 0)
 
+    def test_newton_desde_el_menu(self):
+        n = self.w.newton_widget
+        self.w.items_menu[-1].click()
+        self.assertIs(self.w.stack.currentWidget(), n)
+        casos = [
+            ("x^2 - 2", "1", 30, "Convergencia alcanzada", 4),
+            ("x^2 + 1", "0", 30, "Derivada nula", 0),
+            ("x^2 - 2", "1", 1, "Máximo de iteraciones", 1),
+        ]
+        for funcion, inicial, maximo, estado, filas in casos:
+            with self.subTest(estado=estado):
+                n.funcion.setText(funcion)
+                n.inicial.setText(inicial)
+                n.maximo.setValue(maximo)
+                n.boton.click()
+                self.assertIn(estado, n.resumen.text())
+                self.assertEqual(n.tabla.rowCount(), filas)
+                n.tabs.setCurrentWidget(n.lienzo)
+                n.lienzo.draw()
+                self.assertTrue(n.figura.axes[0].lines)
+                if estado.startswith("Convergencia"):
+                    self.assertAlmostEqual(n.resultado.x, 2 ** 0.5, places=7)
+                    self.assertLess(n.resultado.residuo, 1e-8)
+
     def test_verificador(self):
         v = self.w.verificador_widget
         v.spin_n.setValue(2)

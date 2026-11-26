@@ -23,6 +23,8 @@ from gui.modules.lu_widget import LUWidget, TEOREMAS_LU
 from gui.modules.verificador_widget import VerificadorWidget
 from gui.modules.metodos_numericos_widget import MetodosNumericosWidget
 from gui.modules.iterativos_widget import IterativosWidget
+from gui.modules.newton_widget import NewtonWidget
+from core.newton import CRITERIO
 from gui.styles import construir_estilo, colores_enfasis, TEMAS, ENFASIS
 from gui.componentes import BotonIcono, icono, icono_estados
 from gui.entrada import TablaMatriz
@@ -45,6 +47,7 @@ MODULOS = [
     ("mod_verificador", "Verificador", "16 propiedades"),
     ("mod_metodos_numericos", "Métodos Numéricos", "Bisección, Gráfica, Errores"),
     ("mod_iterativos", "Métodos Iterativos", "Jacobi y Gauss-Seidel"),
+    ("mod_newton", "Newton-Raphson", "Raíces de funciones"),
 ]
 
 TEOREMAS = [
@@ -125,6 +128,8 @@ TEOREMAS = [
         "   • Residuo final: ||Ax - b||_∞\n"
         "   • Detección de divergencia y desbordamiento ante crecimiento descontrolado de errores."
     ),
+    "Newton-Raphson\n\nxᵢ₊₁ = xᵢ − f(xᵢ) / f′(xᵢ)\n\n" + CRITERIO
+    + "\n\nEl proceso se detiene si |f′(xᵢ)| ≤ 10⁻¹² o si se agotan las iteraciones.",
 ]
 
 
@@ -231,10 +236,11 @@ class MainWindow(QMainWindow):
         self.verificador_widget = VerificadorWidget()
         self.metodos_numericos_widget = MetodosNumericosWidget()
         self.iterativos_widget = IterativosWidget()
+        self.newton_widget = NewtonWidget()
         self.modulos = [
             self.ecuaciones_widget, self.transformaciones_widget, self.operaciones_widget,
             self.determinantes_widget, self.lu_widget, self.verificador_widget,
-            self.metodos_numericos_widget, self.iterativos_widget,
+            self.metodos_numericos_widget, self.iterativos_widget, self.newton_widget,
         ]
 
         main_layout.addWidget(self._crear_riel())

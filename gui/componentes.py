@@ -76,6 +76,11 @@ def _trazos(nombre):
         p.moveTo(5.6, 10); p.quadTo(7, 4.5, 12.5, 4)
         p.moveTo(12.5, 4); p.lineTo(10, 2.6)
         p.moveTo(12.5, 4); p.lineTo(10.8, 6.2)
+    elif nombre == "mod_newton":
+        p.moveTo(2, 13)
+        p.quadTo(9, 13, 12, 2)
+        p.moveTo(4, 15)
+        p.lineTo(14, 5)
     elif nombre == "mod_operaciones":
         # Dos matrices que se combinan
         p.addRoundedRect(QRectF(2, 2, 8, 8), 2, 2)
