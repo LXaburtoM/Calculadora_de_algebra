@@ -4,159 +4,151 @@ Tema: Cobertura total de teoremas y propiedades requeridas para la Tarea 6.
 Elaborado por: Manuel Antonio Mayorga Mendoza, Andy Daivari Canales Reyes,
                Antonio Esteban Vargas Ramírez, Luis Xavier Aburto Mantilla.
 """
-from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QTableWidget, QTableWidgetItem, QSpinBox, QCheckBox,
-    QTextEdit, QMessageBox, QGroupBox, QHeaderView, QLineEdit
-)
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QGridLayout, QLabel, QMessageBox, QSizePolicy
 from PyQt6.QtCore import Qt
 from fractions import Fraction
-from core.parser import formato_numero
+from core.parser import formato_numero, parse_expresion
 from core.algebra_avanzada import (
     inversa_matriz, determinante_reduccion, copiar_matriz
 )
 from core.operaciones_matriciales import (
     sumar_matrices, multiplicar_matrices, transpuesta_matriz, escalar_por_matriz
 )
-from core.validadores import (
-    leer_matriz_segura, leer_escalar_seguro, mostrar_error,
-    formatear_matriz, comparar_matrices
+from core.validadores import formatear_matriz, comparar_matrices
+from core.eliminacion_gaussiana import nombre_var
+from gui.componentes import Tarjeta
+from gui.entrada import (
+    SelectorDimension, TablaMatriz, leer_matriz_segura, TecladoMatematico, TarjetaResultado,
+    grupo_dimensiones, boton_principal, contenedor_fila, pagina_seccion, tarjeta_tabla
 )
 
-SEP = "=" * 78
-SUBSEP = "-" * 78
+SEP = "=" * 60
+SUBSEP = "-" * 60
+VALORES_POR_DEFECTO = {
+    "A": [["1", "2"], ["3", "4"]],
+    "B": [["2", "1"], ["1", "1"]],
+    "C": [["1", "1"], ["0", "2"]],
+}
 
 
 class VerificadorWidget(QWidget):
     def __init__(self):
         super().__init__()
+        self._crear_barra()
         self.init_ui()
 
-    def init_ui(self):
-        layout = QVBoxLayout(self)
-        encabezado = QLabel("Verificador Exhaustivo de Propiedades Matriciales")
-        encabezado.setObjectName("SectionHeader")
-        encabezado.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(encabezado)
+    # ── Barra superior del módulo (la coloca MainWindow) ─────────────
 
-        layout.addWidget(self._crear_controles())
-        layout.addLayout(self._crear_tablas())
-        layout.addWidget(self._crear_variables_adicionales())
-        layout.addWidget(self._crear_resultado())
+    def _crear_barra(self):
+        self.spin_n = SelectorDimension(2, "Dimensión n (matrices n × n)", 6, minimo=2)
+        # Filas i, j para las operaciones elementales de la propiedad 15
+        self.spin_fi = SelectorDimension(1, "Fila i (operaciones elementales)", 2)
+        self.spin_fj = SelectorDimension(2, "Fila j (operaciones elementales)", 2)
+        self.barra_izq = contenedor_fila(grupo_dimensiones(["  n =", self.spin_n]))
+        self.barra_der = boton_principal("Evaluar 16 propiedades", "Evaluar (Ctrl+Enter)",
+                                         self._ejecutar_verificacion)
+
+    def barra_contexto(self):
+        return self.barra_izq, self.barra_der
+
+    def accion_principal(self):
+        self._ejecutar_verificacion()
+
+    # ── Cuerpo ──────────────────────────────────────────────────────
+
+    def init_ui(self):
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        # Cuadrícula 2 × 2: A y B arriba; C y los parámetros abajo
+        self.tabla_A = TablaMatriz(filas_visibles=3, expandir=True)
+        self.tabla_B = TablaMatriz(filas_visibles=3, expandir=True)
+        self.tabla_C = TablaMatriz(filas_visibles=3, expandir=True)
+        cuadricula = QWidget()
+        grid = QGridLayout(cuadricula)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setSpacing(12)
+        for k, (tabla, nombre) in enumerate(((self.tabla_A, "A"), (self.tabla_B, "B"), (self.tabla_C, "C"))):
+            grid.addWidget(tarjeta_tabla(nombre, tabla, f"Matriz {nombre} (invertible)"),
+                           k // 2, k % 2, Qt.AlignmentFlag.AlignTop)
+        grid.addWidget(self._crear_parametros(), 1, 1, Qt.AlignmentFlag.AlignTop)
+        # Columnas del mismo ancho sin importar el contenido de cada tarjeta
+        grid.setColumnStretch(0, 1)
+        grid.setColumnStretch(1, 1)
+        for tarjeta in cuadricula.findChildren(Tarjeta):
+            tarjeta.setMinimumWidth(0)
+            tarjeta.setSizePolicy(QSizePolicy.Policy.Ignored, tarjeta.sizePolicy().verticalPolicy())
+
+        self.teclado = TecladoMatematico()
+        self.teclado.registrar(self.tabla_A, self.tabla_B, self.tabla_C, self.tabla_k)
+        self.teclado.fin_de_entrada.connect(self.accion_principal)
+
+        self.res = TarjetaResultado(mensaje_vacio="Los resultados aparecerán aquí al evaluar las propiedades.")
+        self.res.formato.cambiado.connect(self._repetir)
+        self.chk_frac = self.res.formato
+        self.txt_res = self.res.texto
+        self.txt_res.setLineWrapMode(self.txt_res.LineWrapMode.NoWrap)
+
+        layout.addWidget(pagina_seccion([], [(cuadricula, 1), (None, 0), (self.teclado, 0)], self.res))
+
+        self.spin_n.valueChanged.connect(self._actualizar_tablas)
         self._actualizar_tablas()
         self._cargar_valores_por_defecto()
 
-    def _crear_controles(self):
-        """Crea la barra de controles superior."""
-        box = QGroupBox("Configuración de Matrices Cuadradas (n × n)")
-        lay = QHBoxLayout(box)
-        lay.addWidget(QLabel("Dimensión n:"))
-        self.spin_n = QSpinBox()
-        self.spin_n.setRange(2, 6)
-        self.spin_n.setValue(2)
-        self.spin_n.valueChanged.connect(self._actualizar_tablas)
-        lay.addWidget(self.spin_n)
+    def _crear_parametros(self):
+        """Escalar k y filas i, j: solo los usan las propiedades 3, 14 y 15."""
+        tarjeta = Tarjeta("Parámetros")
+        tarjeta.setToolTip("k: propiedades 3, 14 y 15 · i, j: operaciones de fila de la propiedad 15")
+        self.tabla_k = TablaMatriz(filas_visibles=1, encabezado_filas=False)
+        self.tabla_k.horizontalHeader().setVisible(False)
+        self.tabla_k.redimensionar(1, 1, ["k"], [""])
+        self.tabla_k.item(0, 0).setText("3")
+        self.tabla_k.setFixedWidth(96)
+        etiqueta_k = QLabel("k =")
+        etiqueta_k.setObjectName("Muted")
+        filas = grupo_dimensiones(["  Filas  i =", self.spin_fi, "  j =", self.spin_fj])
 
-        self.chk_frac = QCheckBox("Fracciones")
-        self.chk_frac.setChecked(True)
-        lay.addWidget(self.chk_frac)
+        # k y las filas apiladas: la tarjeta queda tan angosta como las matrices
+        fila_k = QHBoxLayout()
+        fila_k.setSpacing(8)
+        fila_k.addWidget(etiqueta_k)
+        fila_k.addWidget(self.tabla_k)
+        fila_k.addStretch()
+        fila_ij = QHBoxLayout()
+        fila_ij.addWidget(filas)
+        fila_ij.addStretch()
+        tarjeta.lay.addLayout(fila_k)
+        tarjeta.lay.addLayout(fila_ij)
+        return tarjeta
 
-        lay.addStretch()
+    def aplicar_tema(self, paleta):
+        self.res.aplicar_tema(paleta)
+        self.teclado.aplicar_tema(paleta)
 
-        btn_verificar = QPushButton("▶ Evaluar Conjunto Completo de Teoremas (16 Propiedades)")
-        btn_verificar.setObjectName("PrimaryButton")
-        btn_verificar.clicked.connect(self._ejecutar_verificacion)
-        lay.addWidget(btn_verificar)
-        return box
-
-    def _crear_tablas(self):
-        """Crea las 3 tablas para las matrices A, B y C."""
-        tablas = QHBoxLayout()
-
-        boxA = QGroupBox("Matriz A (Invertible)")
-        layA = QVBoxLayout(boxA)
-        self.tabla_A = QTableWidget()
-        layA.addWidget(self.tabla_A)
-        tablas.addWidget(boxA)
-
-        boxB = QGroupBox("Matriz B (Invertible)")
-        layB = QVBoxLayout(boxB)
-        self.tabla_B = QTableWidget()
-        layB.addWidget(self.tabla_B)
-        tablas.addWidget(boxB)
-
-        boxC = QGroupBox("Matriz C (Invertible)")
-        layC = QVBoxLayout(boxC)
-        self.tabla_C = QTableWidget()
-        layC.addWidget(self.tabla_C)
-        tablas.addWidget(boxC)
-
-        return tablas
-
-    def _crear_variables_adicionales(self):
-        """Crea los campos para el escalar k y filas i, j de operaciones elementales."""
-        box = QGroupBox("Parámetros para Operaciones Elementales y Escalares")
-        lay = QHBoxLayout(box)
-
-        lay.addWidget(QLabel("Escalar k:"))
-        self.le_k = QLineEdit("3")
-        self.le_k.setFixedWidth(50)
-        lay.addWidget(self.le_k)
-
-        lay.addSpacing(20)
-        lay.addWidget(QLabel("Fila i (para operaciones):"))
-        self.spin_fi = QSpinBox()
-        self.spin_fi.setRange(1, 6)
-        self.spin_fi.setValue(1)
-        lay.addWidget(self.spin_fi)
-
-        lay.addWidget(QLabel("Fila j (para operaciones):"))
-        self.spin_fj = QSpinBox()
-        self.spin_fj.setRange(1, 6)
-        self.spin_fj.setValue(2)
-        lay.addWidget(self.spin_fj)
-
-        lay.addStretch()
-        return box
-
-    def _crear_resultado(self):
-        """Crea el cuadro de texto para el reporte final."""
-        box = QGroupBox("Reporte de Evaluación de Teoremas (Ambos Miembros)")
-        lay = QVBoxLayout(box)
-        self.txt_res = QTextEdit()
-        self.txt_res.setReadOnly(True)
-        self.txt_res.setFontFamily("Consolas")
-        lay.addWidget(self.txt_res)
-        return box
+    def _repetir(self):
+        if self.res.resumen.isVisible() and self.res.resumen.punto.property("estado") != "error":
+            self._ejecutar_verificacion()
 
     def _actualizar_tablas(self):
         """Redimensiona las 3 tablas A, B y C según n."""
         n = self.spin_n.value()
-        self.spin_fi.setRange(1, n)
-        self.spin_fj.setRange(1, n)
+        self.spin_fi.set_maximo(n)
+        self.spin_fj.set_maximo(n)
         for tabla in (self.tabla_A, self.tabla_B, self.tabla_C):
-            tabla.setRowCount(n)
-            tabla.setColumnCount(n)
-            tabla.setHorizontalHeaderLabels([f"C{j+1}" for j in range(n)])
-            tabla.setVerticalHeaderLabels([f"F{i+1}" for i in range(n)])
-            for i in range(n):
-                for j in range(n):
-                    if not tabla.item(i, j):
-                        it = QTableWidgetItem("0")
-                        it.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                        tabla.setItem(i, j, it)
-            tabla.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+            tabla.redimensionar(n, n, [nombre_var(j) for j in range(n)], [f"F{i+1}" for i in range(n)])
+        self.res.resumen.setVisible(False)
+        self.txt_res.clear()
 
     def _cargar_valores_por_defecto(self):
         """Carga matrices invertibles predeterminadas para n=2."""
-        mat_A = [["1", "2"], ["3", "4"]]
-        mat_B = [["2", "1"], ["1", "1"]]
-        mat_C = [["1", "1"], ["0", "2"]]
-        for i in range(2):
-            for j in range(2):
-                self.tabla_A.setItem(i, j, QTableWidgetItem(mat_A[i][j]))
-                self.tabla_B.setItem(i, j, QTableWidgetItem(mat_B[i][j]))
-                self.tabla_C.setItem(i, j, QTableWidgetItem(mat_C[i][j]))
+        for tabla, nombre in ((self.tabla_A, "A"), (self.tabla_B, "B"), (self.tabla_C, "C")):
+            for i, fila in enumerate(VALORES_POR_DEFECTO[nombre]):
+                for j, valor in enumerate(fila):
+                    tabla.item(i, j).setText(valor)
+
+    def _error(self, titulo, mensaje):
+        self.res.resumen.mostrar("error", titulo)
+        QMessageBox.critical(self, titulo, mensaje)
 
     def _veredicto(self, cumple):
         """Retorna el diagnóstico con el formato de la rúbrica."""
@@ -166,28 +158,29 @@ class VerificadorWidget(QWidget):
 
     def _ejecutar_verificacion(self):
         """Evalúa ambos miembros de cada teorema exigido en la Tarea 6."""
+        for tabla in (self.tabla_A, self.tabla_B, self.tabla_C, self.tabla_k):
+            tabla.terminar_edicion()
         n = self.spin_n.value()
         frac = self.chk_frac.isChecked()
 
         A, errA = leer_matriz_segura(self.tabla_A, n, n, "A")
         B, errB = leer_matriz_segura(self.tabla_B, n, n, "B")
         C, errC = leer_matriz_segura(self.tabla_C, n, n, "C")
-        k_val, errK = leer_escalar_seguro(self.le_k, "Escalar k")
+        k_val, errK = parse_expresion(self.tabla_k.item(0, 0).text())
 
-        errores = errA + errB + errC + ([errK] if errK else [])
-        if mostrar_error(self, errores):
-            return
+        errores = errA + errB + errC + ([f"Escalar k: {errK}"] if errK else [])
+        if errores:
+            return self._error("Error en los datos", "\n".join(errores))
 
         detA, _ = determinante_reduccion(A)
         detB, _ = determinante_reduccion(B)
         detC, _ = determinante_reduccion(C)
 
         if detA == 0 or detB == 0:
-            QMessageBox.critical(
-                self, "Error de Invertibilidad",
+            return self._error(
+                "Error de Invertibilidad",
                 "Las matrices A y B deben ser invertibles (det != 0) para evaluar las propiedades de la inversa."
             )
-            return
 
         A_inv, _, _ = inversa_matriz(A, n)
         B_inv, _, _ = inversa_matriz(B, n)
@@ -450,3 +443,12 @@ class VerificadorWidget(QWidget):
         ]
 
         self.txt_res.setText("\n".join(reporte))
+
+        # Resumen: la propiedad 15 cuenta como cumplida si se cumplen sus tres casos
+        resultados = [c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14,
+                      c15_a and c15_b and c15_c, c16]
+        cumplidas = sum(resultados)
+        fallan = [str(i + 1) for i, ok in enumerate(resultados) if not ok]
+        self.res.resumen.mostrar("ok" if not fallan else "aviso",
+                                 f"{cumplidas} de 16 propiedades se cumplen",
+                                 "" if not fallan else "no se cumple: " + ", ".join(fallan))
